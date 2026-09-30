@@ -3,8 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-<title> 전통주 & 누룩 일지</title>
+<title>미미록 - 전통주 & 누룩 일지</title>
 
+<!-- ==========================================================================
+     [1구역: 디자인 스타일 CSS]
+     눌렀을 때 쫀득하게 눌리는 터치 피드백 애니메이션이 적용되어 있습니다.
+     ========================================================================== -->
 <style>
   :root {
     box-sizing: border-box;
@@ -44,7 +48,6 @@
   h2 { font-size: 16px; margin: 0 0 8px; }
   .sub, .mute { color: var(--mute); font-size: 13px; }
 
-  /* 클릭 가능한 카드 피드백 */
   .card {
     background: var(--card); border: 1px solid var(--line); border-radius: 14px;
     padding: 14px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);
@@ -211,15 +214,15 @@
         ]
       },
       {
-        id: 2, type: '누룩', name: '누룩 계산기', start: ago(8), status: '발효중',
+        id: 2, type: '누룩', name: '가을 향온곡 (계산기 배치)', start: ago(8), status: '발효중',
         targetDough: 1000,
         lossRate: 10,
         moldingNote: '통밀을 거칠게 분쇄 후 물과 치대어 디딤틀에 볏짚 깔고 압착 성형함.',
         recipeItems: [
-          { cat: 'grain', name: '멥쌀가루', pct: 80 },
+          { cat: 'grain', name: '통밀가루', pct: 80 },
           { cat: 'grain', name: '녹두가루', pct: 20 },
-          { cat: 'water', name: '반죽용 물', pct: 25 },
-          { cat: 'extra', name: '부재료', pct: 2 }
+          { cat: 'water', name: '반죽 생수', pct: 25 },
+          { cat: 'extra', name: '모균/볏짚가루', pct: 2 }
         ],
         logs: [
           { d: ago(8), temp: 26.0, room: 24.0, hum: 85, vent: false, img: '', note: '성형 후 띄우기 방 입실, 포대 덮음' },
@@ -254,24 +257,14 @@
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const f = (n, d = 1) => Number.isFinite(+n) ? (+n).toFixed(d) : '-';
 
-  // 💡 [버그 수정 완료] 막걸리와 누룩 모두 안전하게 재료 목록을 꺼내오는 핵심 함수
   function getAllItems(b){
     if(!b) return [];
-    if(b.type === '누룩'){
-      return b.items || [];
-    }
-    // 전통주(막걸리/약주 등)일 때 stages 구조 안전하게 순회
-    if(b.stages && Array.isArray(b.stages)){
-      return b.stages.flatMap(s => (s && s.items) ? s.items : []);
-    }
-    return [];
+    if(!b.stages || !b.stages.length) return [];
+    return b.stages.flatMap(s => s.items || []);
   }
 
   const tot = (b, k) => getAllItems(b).filter(i => i.cat === k).reduce((a, i) => a + (+i.amt || 0), 0);
-  const all = b => {
-    const cats = (b && b.type === '누룩') ? [] : WINE_CATS;
-    return cats.reduce((a, c) => a + tot(b, c.k), 0);
-  };
+  const all = b => WINE_CATS.reduce((a, c) => a + tot(b, c.k), 0);
 
   function brief(b){
     if(!b) return '';
@@ -296,7 +289,7 @@
   function getStageContext(b, targetDate){
     if(!b || b.type === '누룩') return null;
     if(!b.stages || !b.stages.length) return null;
-    const sorted = b.stages.filter(s => s && s.date).slice().sort((x, y) => x.date.localeCompare(y.date));
+    const sorted = b.stages.filter(s => s.date).slice().sort((x, y) => x.date.localeCompare(y.date));
     if(!sorted.length) return null;
 
     const exact = sorted.find(s => s.date === targetDate);
@@ -315,11 +308,11 @@
   }
 
   function calcNuruk(b){
-    const targetDough = +(b && b.targetDough) || 1000;
-    const lossRate = (b && b.lossRate != null) ? +b.lossRate : 10;
+    const targetDough = +b.targetDough || 1000;
+    const lossRate = b.lossRate != null ? +b.lossRate : 10;
     const reqDough = targetDough * (1 + (lossRate / 100));
 
-    const items = (b && b.recipeItems) || [];
+    const items = b.recipeItems || [];
     const grains = items.filter(i => i.cat === 'grain');
     const waters = items.filter(i => i.cat === 'water');
     const extras = items.filter(i => i.cat === 'extra');
@@ -363,7 +356,6 @@
   }
 
   function chart(b){
-    if(!b) return '';
     const isNuruk = b.type === '누룩';
     const filter = view.chartFilter || 'all';
     const L = (b.logs || []).filter(l => l.temp !== '' || l.room !== '' || l.hum !== '' || l.brix !== '');
@@ -647,7 +639,6 @@
     `;
   }
 
-  // 💡 [개선 완료] 전통주 주방문(배합비) 화면
   function wineRecipeView(b){
     if(!b.stages) b.stages = [];
     const g = tot(b, 'grain'), n = tot(b, 'nuruk'), w = tot(b, 'water'), T = all(b);
@@ -790,7 +781,6 @@
     `;
   }
 
-  // 💡 [개선 완료] 전통주 발효일지 화면
   function wineJournalView(b){
     const sortedLogs = (b.logs || []).slice().sort((x, y) => y.d.localeCompare(x.d));
     return `
@@ -912,9 +902,8 @@
         <div class="no-print" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
           <button type="button" class="g" onclick="appGo('list')">← 목록</button>
           <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
-            <button type="button" class="share-btn" onclick="appShareOrSave()">📤 카톡/저장</button>
-            <button type="button" class="download-btn" onclick="appExportCSV()">📊 CSV</button>
-            <button type="button" class="download-btn" onclick="appPrintPDF()">📄 PDF</button>
+            <button type="button" class="share-btn" onclick="appShareOrSave()">📤 카톡 전송 / 공유</button>
+            <button type="button" class="download-btn" onclick="appPrintPDF()">📄 PDF 저장</button>
           </div>
         </div>
 
@@ -1217,57 +1206,34 @@
     }
   };
 
-  function generateCSV(b){
-    let csv = '\uFEFF';
-    csv += `[기본 정보]\r\n배치명,${b.name}\r\n종류,${b.type}\r\n시작일,${b.start}\r\n상태,${b.status}\r\n\r\n`;
-
-    if(b.type === '누룩'){
-      const calc = calcNuruk(b);
-      csv += `[성형 및 디딤 메모]\r\n"${(b.moldingNote||'').replace(/"/g, '""')}"\r\n\r\n`;
-      csv += `[반죽 목표 설정]\r\n목표 반죽량,${calc.targetDough}g\r\n손실률,${calc.lossRate}%\r\n실제 제조량,${calc.reqDough}g\r\n\r\n`;
-      csv += `[원료 배합 계산 결과]\r\n분류,원료명,투입비율(%),실제 계량치(g)\r\n`;
-      calc.calculatedGrains.forEach(g => { csv += `"곡물","${g.name}",${g.pct}%,${g.amt.toFixed(1)}g\r\n`; });
-      calc.calculatedWaters.forEach(w => { csv += `"물","${w.name}",${w.pct}%,${w.amt.toFixed(1)}g\r\n`; });
-      calc.calculatedExtras.forEach(e => { csv += `"부재료","${e.name}",${e.pct}%,${e.amt.toFixed(1)}g\r\n`; });
-      csv += `\r\n[누룩 띄우기 일지]\r\n측정일,경과일,품온(°C),실온(°C),습도(%),환기여부,비고\r\n`;
-      (b.logs || []).forEach(l => {
-        csv += `"${l.d}","D+${dayN(b.start, l.d)}",${l.temp||''},${l.room||''},${l.hum||''},"${l.vent?'환기함':''}", "${(l.note||'').replace(/"/g, '""')}"\r\n`;
-      });
-    } else {
-      const g = tot(b, 'grain');
-      csv += `[누적 배합비]\r\n곡물,${g}g,100%\r\n누룩,${tot(b,'nuruk')}g,${g?(tot(b,'nuruk')/g*100).toFixed(1):0}%\r\n물,${tot(b,'water')}g,${g?(tot(b,'water')/g*100).toFixed(1):0}%\r\n\r\n`;
-      csv += `[발효 추적 일지]\r\n측정일,경과일,품온(°C),실온(°C),당도(Brix),pH,교반,비고\r\n`;
-      (b.logs || []).forEach(l => {
-        csv += `"${l.d}","D+${dayN(b.start, l.d)}",${l.temp||''},${l.room||''},${l.brix||''},${l.ph||''},"${l.stir?'교반함':''}", "${(l.note||'').replace(/"/g, '""')}"\r\n`;
-      });
-    }
-    return csv;
-  }
-
+  // 💡 카카오톡 / 스마트폰 시스템 텍스트 공유
   window.appShareOrSave = async () => {
     const b = cur();
     if(!b) return;
-    const csvContent = generateCSV(b);
-    const file = new File([csvContent], `${b.name}_일지_${today()}.csv`, { type: 'text/csv;charset=utf-8' });
-    if(navigator.canShare && navigator.canShare({ files: [file] })){
+    const last = (b.logs && b.logs.length) ? b.logs[b.logs.length - 1] : null;
+
+    let shareText = `🍶 [미미록 일지] ${b.name}\n- 구분: ${b.type} (${b.status})\n- 시작일: ${b.start} (D+${dayN(b.start)})\n- ${brief(b)}`;
+    if(last){
+      shareText += `\n- 최근측정(${last.d}): 품온 ${last.temp}°C, 실온 ${last.room}°C` + 
+                    (last.hum ? `, 습도 ${last.hum}%` : '') + 
+                    (last.brix ? `, 당도 ${last.brix}°Bx` : '');
+    }
+
+    if(navigator.share){
       try {
-        await navigator.share({ title: b.name, text: `${b.name} 일지 파일입니다.`, files: [file] });
+        await navigator.share({
+          title: `[미미록] ${b.name}`,
+          text: shareText
+        });
       } catch(e){}
     } else {
-      window.appExportCSV();
+      // PC 등 미지원 환경에서는 클립보드 복사
+      navigator.clipboard.writeText(shareText);
+      alert('일지 요약 내용이 복사되었습니다. 카카오톡 창에 붙여넣기(Ctrl+V) 하세요!');
     }
   };
 
-  window.appExportCSV = () => {
-    const b = cur();
-    if(!b) return;
-    const blob = new Blob([generateCSV(b)], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `${b.name}_일지_${today()}.csv`;
-    link.click();
-  };
-
+  // PDF 저장 및 인쇄
   window.appPrintPDF = () => window.print();
 
   render();
