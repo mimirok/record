@@ -197,7 +197,7 @@ const it = (cat, name, amt, pct=0) => ({ cat, name, amt: +amt || 0, pct: +pct ||
 function seed(){
   return [
     {
-      id: 1, type: '막걸리', name: '찰흑미 삼양주', start: ago(6), status: '발효중',
+      id: 1, type: '막걸리', name: '찰흑미 삼양주 *참고용*', start: ago(6), status: '발효중',
       target: { nurukRatio: 10.0, waterRatio: 100.0 },
       stages: [
         { name: '밑술 (1단계)', date: ago(6), items: [it('grain', '멥쌀 범벅', 1000), it('nuruk', '향온곡', 300), it('water', '끓인 물', 1500)], note: '25도 냉각 후 누룩 혼화' },
@@ -211,7 +211,7 @@ function seed(){
       ]
     },
     {
-      id: 2, type: '누룩', name: '가을 향온곡 (계산기 배치)', start: ago(8), status: '발효중',
+      id: 2, type: '누룩', name: '가을 향온곡 *참고용*', start: ago(8), status: '발효중',
       targetDough: 1000,
       lossRate: 10,
       moldingNote: '통밀을 거칠게 분쇄 후 물과 치대어 디딤틀에 볏짚 깔고 압착 성형함.',
@@ -219,7 +219,7 @@ function seed(){
         { cat: 'grain', name: '통밀가루', pct: 80 },
         { cat: 'grain', name: '녹두가루', pct: 20 },
         { cat: 'water', name: '반죽 생수', pct: 25 },
-        { cat: 'extra', name: '모균/볏짚가루', pct: 2 }
+        { cat: 'extra', name: '추가재료', pct: 2 }
       ],
       logs: [
         { d: ago(8), temp: 26.0, room: 24.0, hum: 85, vent: false, img: '', note: '성형 후 띄우기 방 입실, 포대 덮음' },
@@ -465,8 +465,8 @@ function nurukRecipeView(b){
 
   return `
     <div class="card">
-      <b>⚖️ 누룩 반죽 목표량 설정 (손실률 10% 자동 계산)</b>
-      <div class="mute">완성할 누룩 반죽 무게를 입력하면 손실률 10%를 더해 필요한 재료를 역산합니다.</div>
+      <b>⚖️ 누룩 반죽 목표량 설정 (손실률 입력시 자동 계산)</b>
+      <div class="mute">완성할 누룩 반죽 무게를 입력하면 손실률을 더해 필요한 재료를 역산합니다.</div>
       <div class="row no-export" style="margin-top:8px">
         <div>
           <label>목표 누룩 반죽량 (g)</label>
