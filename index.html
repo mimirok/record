@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <title>미미록 - 전통주 & 누룩 일지</title>
 
-<!-- 캡처 및 PDF 라이브러리 (비동기 로드) -->
+<!-- 캡처 및 PDF 라이브러리 -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
@@ -88,7 +88,6 @@
   .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; }
   .row > * { flex: 1; min-width: 70px; }
 
-  /* 💡 터치 미스 없는 고반응 버튼 스타일 */
   button {
     font: inherit; border: 1px solid var(--line); background: var(--card);
     color: var(--ink); border-radius: 8px; padding: 10px 14px; cursor: pointer;
@@ -108,6 +107,11 @@
   button.p:active { background: var(--acc-dark); }
   button.g { border: none; color: var(--mute); background: none; padding: 6px 8px; cursor: pointer; }
   button.g:active { color: var(--ink); transform: scale(0.9); }
+
+  button.backup-btn {
+    border: 1px dashed var(--line); color: var(--ink); background: var(--card);
+    padding: 6px 10px; font-size: 12px; font-weight: 500;
+  }
 
   button.edit-btn { 
     border: 1px solid var(--line); color: var(--acc); background: var(--bg); 
@@ -162,10 +166,9 @@
   .leg i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; }
   .log-img { max-width: 100%; max-height: 180px; border-radius: 8px; margin-top: 6px; object-fit: cover; border: 1px solid var(--line); }
 
-  /* 💡 터치 방해 금지 설정 (클릭을 절대로 막지 않음) */
   #capture-loading {
     display: none; 
-    pointer-events: none; /* 클릭 가로챔 원천 차단 */
+    pointer-events: none;
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
     background: rgba(0,0,0,0.6); z-index: 99999; color: #fff;
     font-size: 16px; font-weight: 600; justify-content: center; align-items: center;
@@ -176,8 +179,10 @@
 <div id="capture-loading">저장 중입니다...</div>
 <div class="wrap" id="app"></div>
 
+<!-- 숨겨진 파일 선택 인풋 (복원용) -->
+<input type="file" id="backup-file-input" accept=".json" style="display:none" onchange="appImportBackupFile(event)">
+
 <script>
-// 💡 전역 함수를 즉시 실행 함수 바깥에 선언하여 HTML 버튼 이벤트 바인딩 보장
 let db = [];
 let view = { page: 'list', id: null, tab: 'recipe', chartFilter: 'all' };
 
@@ -264,7 +269,7 @@ function brief(b){
   if(!b) return '';
   if(b.type === '누룩'){
     const calc = calcNuruk(b);
-    return `목표 반죽 ${b.targetDough || 1000}g (손실10% ➔ ${f(calc.reqDough, 0)}g) · 곡물 ${f(calc.grainTotal, 0)}g + 물 ${f(calc.waterTotal, 0)}g`;
+    return `목표 반죽 ${b.targetDough || 1000}g (손실${calc.lossRate}% ➔ ${f(calc.reqDough, 0)}g) · 곡물 ${f(calc.grainTotal, 0)}g + 물 ${f(calc.waterTotal, 0)}g`;
   } else {
     const g = tot(b, 'grain');
     if(!g) return '곡물 미입력';
@@ -840,8 +845,15 @@ function render(){
     }).join('');
 
     a.innerHTML = `
-      <h1>🍶 미미록 (味美錄)</h1>
-      <div class="sub"> 주방문 & 누룩 발효 기록장</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin:8px 0 4px">
+        <h1 style="margin:0">🍶 미미록 (味美錄)</h1>
+        <!-- 💡 데이터 백업 & 복원 도구 -->
+        <div style="display:flex;gap:4px">
+          <button type="button" class="backup-btn" onclick="appExportBackupFile()">💾 전체 백업</button>
+          <button type="button" class="backup-btn" onclick="appTriggerImport()">📥 복원</button>
+        </div>
+      </div>
+      <div class="sub">전통주 주방문 & 누룩 발효 기록장</div>
       <button type="button" class="p" style="width:100%;margin:12px 0" onclick="appGo('new')">+ 새 배치 등록</button>
       ${batchCards}
     `;
@@ -908,9 +920,6 @@ function render(){
   }
 }
 
-/* ==========================================================================
-   전역 버튼 액션 핸들러 (window 객체에 직접 할당)
-   ========================================================================== */
 window.appGo = function(page, id){
   view.page = page;
   view.id = id || null;
@@ -1160,7 +1169,56 @@ window.appDelBatch = function(){
 };
 
 /* ==========================================================================
-   액자형 이미지 저장 (PNG)
+   💾 데이터 전체 백업 (JSON 파일 내보내기)
+   ========================================================================== */
+window.appExportBackupFile = function(){
+  if(!db || !db.length) return alert('백업할 데이터가 없습니다.');
+  const jsonStr = JSON.stringify(db, null, 2);
+  const blob = new Blob([jsonStr], { type: 'application/json' });
+  const fileName = `미미록_전체데이터백업_${today()}.json`;
+
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  alert('백업 파일이 안전하게 저장되었습니다.\n기기를 바꾸거나 복원할 때 이 파일을 불러오세요!');
+};
+
+/* ==========================================================================
+   📥 데이터 전체 복원 (JSON 파일 가져오기)
+   ========================================================================== */
+window.appTriggerImport = function(){
+  const input = $('#backup-file-input');
+  if(input) input.click();
+};
+
+window.appImportBackupFile = function(event){
+  const file = event.target.files[0];
+  if(!file) return;
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const importedData = JSON.parse(e.target.result);
+      if(!Array.isArray(importedData)) throw new Error('올바른 백업 양식이 아닙니다.');
+      if(confirm('기존 데이터를 백업 파일의 내용으로 완전히 교체하시겠습니까?')){
+        db = importedData;
+        saveDB();
+        render();
+        alert('모든 데이터와 사진이 성공적으로 복원되었습니다!');
+      }
+    } catch(err) {
+      alert('파일을 복원할 수 없습니다: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = ''; // 재선택 가능하도록 초기화
+};
+
+/* ==========================================================================
+   🖼️ 액자형 이미지 저장 (PNG)
    ========================================================================== */
 window.appExportImage = async function(){
   const b = cur();
@@ -1169,7 +1227,7 @@ window.appExportImage = async function(){
   const loading = $('#capture-loading');
   const area = $('#capture-area');
   if(!area || typeof html2canvas === 'undefined') {
-    return alert('화면 캡처 모듈을 불러오는 중입니다. 잠시 후 다시 눌러주세요.');
+    return alert('캡처 모듈을 불러오는 중입니다. 잠시 후 다시 눌러주세요.');
   }
 
   loading.style.display = 'flex';
@@ -1193,15 +1251,20 @@ window.appExportImage = async function(){
 
     canvas.toBlob(async blob => {
       const file = new File([blob], fileName, { type: 'image/png' });
+      let shared = false;
       if(navigator.canShare && navigator.canShare({ files: [file] })){
         try {
           await navigator.share({ title: b.name, files: [file] });
+          shared = true;
         } catch(e){}
-      } else {
+      }
+      if(!shared) {
         const link = document.createElement('a');
         link.href = canvas.toDataURL('image/png');
         link.download = fileName;
+        document.body.appendChild(link);
         link.click();
+        document.body.removeChild(link);
       }
     });
   } catch(err) {
@@ -1214,7 +1277,7 @@ window.appExportImage = async function(){
 };
 
 /* ==========================================================================
-   A4 여백 균형 PDF 저장
+   📄 안정적인 PDF 저장 (3중 다운로드 보장)
    ========================================================================== */
 window.appExportPDF = async function(){
   const b = cur();
@@ -1223,7 +1286,7 @@ window.appExportPDF = async function(){
   const loading = $('#capture-loading');
   const area = $('#capture-area');
   if(!area || typeof window.jspdf === 'undefined') {
-    return alert('PDF 생성 모듈을 불러오는 중입니다. 잠시 후 다시 눌러주세요.');
+    return alert('PDF 모듈을 불러오는 중입니다. 잠시 후 다시 눌러주세요.');
   }
 
   loading.style.display = 'flex';
@@ -1269,15 +1332,37 @@ window.appExportPDF = async function(){
     const pdfBlob = pdf.output('blob');
     const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
 
+    let shared = false;
+
+    // 1차 시도: 모바일 시스템 공유창 호출
     if(navigator.canShare && navigator.canShare({ files: [file] })){
       try {
         await navigator.share({
           title: `[미미록 PDF] ${b.name}`,
           files: [file]
         });
+        shared = true;
       } catch(e){}
-    } else {
-      pdf.save(fileName);
+    }
+
+    // 2차 시도: 공유창이 안 열리면 자동 다운로드 파이프라인 가동
+    if(!shared){
+      try {
+        const blobUrl = URL.createObjectURL(pdfBlob);
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = fileName;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        setTimeout(() => {
+          document.body.removeChild(link);
+          URL.revokeObjectURL(blobUrl);
+        }, 1500);
+      } catch(downloadErr) {
+        // 3차 시도: 브라우저 PDF 뷰어로 새 탭 열기
+        pdf.output('dataurlnewwindow');
+      }
     }
   } catch(err) {
     alert('PDF 생성 오류: ' + err.message);
@@ -1288,7 +1373,6 @@ window.appExportPDF = async function(){
   }
 };
 
-// 최초 화면 렌더링
 render();
 </script>
 </body>
