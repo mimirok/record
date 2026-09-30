@@ -9,6 +9,9 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
+<!-- 💡 진짜 엑셀(.xlsx) 생성을 위한 SheetJS 공식 라이브러리 -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
 <style>
   :root {
     box-sizing: border-box;
@@ -109,9 +112,14 @@
   button.g:active { color: var(--ink); transform: scale(0.9); }
 
   button.backup-btn {
-    border: 1px dashed var(--line); color: var(--ink); background: var(--card);
-    padding: 6px 10px; font-size: 12px; font-weight: 500;
+    border: 1px solid var(--line); color: var(--ink); background: var(--card);
+    padding: 6px 9px; font-size: 11.5px; font-weight: 600;
   }
+  button.excel-btn {
+    background: #107c41; color: #fff; border-color: #0b5a2f;
+    padding: 6px 10px; font-size: 11.5px; font-weight: 600;
+  }
+  button.excel-btn:active { background: #0b5a2f; }
 
   button.edit-btn { 
     border: 1px solid var(--line); color: var(--acc); background: var(--bg); 
@@ -179,7 +187,7 @@
 <div id="capture-loading">저장 중입니다...</div>
 <div class="wrap" id="app"></div>
 
-<!-- 숨겨진 파일 선택 인풋 (복원용) -->
+<!-- 숨겨진 파일 선택 인풋 (JSON 복원용) -->
 <input type="file" id="backup-file-input" accept=".json" style="display:none" onchange="appImportBackupFile(event)">
 
 <script>
@@ -845,11 +853,12 @@ function render(){
     }).join('');
 
     a.innerHTML = `
-      <div style="display:flex;justify-content:space-between;align-items:center;margin:8px 0 4px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin:8px 0 4px;flex-wrap:wrap;gap:6px">
         <h1 style="margin:0">🍶 미미록 (味美錄)</h1>
-        <!-- 💡 데이터 백업 & 복원 도구 -->
+        <!-- 💡 엑셀(.xlsx) 및 백업/복원 도구 바 -->
         <div style="display:flex;gap:4px">
-          <button type="button" class="backup-btn" onclick="appExportBackupFile()">💾 전체 백업</button>
+          <button type="button" class="excel-btn" onclick="appExportExcel()">📊 엑셀(.xlsx) 저장</button>
+          <button type="button" class="backup-btn" onclick="appExportBackupFile()">💾 백업</button>
           <button type="button" class="backup-btn" onclick="appTriggerImport()">📥 복원</button>
         </div>
       </div>
@@ -1169,7 +1178,7 @@ window.appDelBatch = function(){
 };
 
 /* ==========================================================================
-   💾 데이터 전체 백업 (JSON 파일 내보내기)
+   💾 백업 & 복원 핸들러
    ========================================================================== */
 window.appExportBackupFile = function(){
   if(!db || !db.length) return alert('백업할 데이터가 없습니다.');
@@ -1183,12 +1192,8 @@ window.appExportBackupFile = function(){
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-  alert('백업 파일이 안전하게 저장되었습니다.\n기기를 바꾸거나 복원할 때 이 파일을 불러오세요!');
 };
 
-/* ==========================================================================
-   📥 데이터 전체 복원 (JSON 파일 가져오기)
-   ========================================================================== */
 window.appTriggerImport = function(){
   const input = $('#backup-file-input');
   if(input) input.click();
@@ -1207,14 +1212,111 @@ window.appImportBackupFile = function(event){
         db = importedData;
         saveDB();
         render();
-        alert('모든 데이터와 사진이 성공적으로 복원되었습니다!');
+        alert('성공적으로 복원되었습니다!');
       }
     } catch(err) {
-      alert('파일을 복원할 수 없습니다: ' + err.message);
+      alert('파일 복원 실패: ' + err.message);
     }
   };
   reader.readAsText(file);
-  event.target.value = ''; // 재선택 가능하도록 초기화
+  event.target.value = '';
+};
+
+/* ==========================================================================
+   📊 진짜 엑셀 파일(.xlsx) 3단 시트 동시 생성 엔진 (SheetJS 기반)
+   ========================================================================== */
+window.appExportExcel = function(){
+  if(typeof XLSX === 'undefined'){
+    return alert('엑셀 생성 모듈을 불러오는 중입니다. 1~2초 후 다시 눌러주세요.');
+  }
+  if(!db || !db.length) return alert('내보낼 배치 데이터가 없습니다.');
+
+  // 워크북 생성
+  const wb = XLSX.utils.book_new();
+
+  // 1. [배치_개요] 시트 데이터 조립
+  const summaryRows = [
+    ['배치 ID', '구분', '배치명', '시작일자', '진행상태', '경과일수(D-Day)', '요약 배합비/목표']
+  ];
+  db.forEach(b => {
+    summaryRows.push([
+      b.id,
+      b.type,
+      b.name,
+      b.start,
+      b.status,
+      `D+${dayN(b.start)}`,
+      brief(b)
+    ]);
+  });
+  const wsSummary = XLSX.utils.aoa_to_sheet(summaryRows);
+  XLSX.utils.book_append_sheet(wb, wsSummary, '배치_개요');
+
+  // 2. [배합비_주방문] 시트 데이터 조립
+  const recipeRows = [
+    ['배치명', '구분', '단계명/성형단계', '원료분류', '원료명', '투입량(g) 또는 지분율(%)', '단계비고/성형메모']
+  ];
+  db.forEach(b => {
+    if(b.type === '누룩'){
+      const calc = calcNuruk(b);
+      recipeRows.push([b.name, '누룩', '반죽 설정', '목표반죽', `${calc.targetDough}g (손실률 ${calc.lossRate}%)`, `실제제조: ${f(calc.reqDough,1)}g`, b.moldingNote || '']);
+      calc.calculatedGrains.forEach(g => {
+        recipeRows.push([b.name, '누룩', '곡물 배합', '곡물', g.name, `${f(g.amt,1)}g (${g.pct}%)`, '']);
+      });
+      calc.calculatedWaters.forEach(w => {
+        recipeRows.push([b.name, '누룩', '반죽수', '물', w.name, `${f(w.amt,1)}g (곡물대비 ${w.pct}%)`, '']);
+      });
+      calc.calculatedExtras.forEach(e => {
+        recipeRows.push([b.name, '누룩', '부재료', '부재료(외할)', e.name, `${f(e.amt,1)}g (곡물대비 ${e.pct}%)`, '반죽무게 제외']);
+      });
+    } else {
+      (b.stages || []).forEach(stg => {
+        const items = stg.items && stg.items.length ? stg.items : [{ cat: '-', name: '(원료 없음)', amt: 0 }];
+        items.forEach((item, idx) => {
+          const catObj = WINE_CATS.find(c => c.k === item.cat) || {};
+          recipeRows.push([
+            b.name,
+            b.type,
+            stg.name,
+            catObj.n || item.cat,
+            item.name,
+            `${item.amt}g`,
+            idx === 0 ? (stg.note || '') : ''
+          ]);
+        });
+      });
+    }
+  });
+  const wsRecipe = XLSX.utils.aoa_to_sheet(recipeRows);
+  XLSX.utils.book_append_sheet(wb, wsRecipe, '배합비_주방문');
+
+  // 3. [발효_환경일지] 시트 데이터 조립
+  const logRows = [
+    ['배치명', '구분', '측정일자', '경과일수', '품온(°C)', '실온(°C)', '당도(°Bx)', 'pH', '습도(%)', '교반/환기 여부', '일지 메모']
+  ];
+  db.forEach(b => {
+    (b.logs || []).slice().sort((x, y) => x.d.localeCompare(y.d)).forEach(l => {
+      logRows.push([
+        b.name,
+        b.type,
+        l.d,
+        `D+${dayN(b.start, l.d)}`,
+        l.temp !== '' ? Number(l.temp) : '',
+        l.room !== '' ? Number(l.room) : '',
+        l.brix !== '' && l.brix != null ? Number(l.brix) : '',
+        l.ph !== '' && l.ph != null ? Number(l.ph) : '',
+        l.hum !== '' && l.hum != null ? Number(l.hum) : '',
+        b.type === '누룩' ? (l.vent ? '환기/뒤집음' : '미실시') : (l.stir ? '교반완료' : '미실시'),
+        l.note || ''
+      ]);
+    });
+  });
+  const wsLogs = XLSX.utils.aoa_to_sheet(logRows);
+  XLSX.utils.book_append_sheet(wb, wsLogs, '발효_환경일지');
+
+  // .xlsx 파일 바이너리 다운로드 실행
+  const fileName = `미미록_전체양조데이터_${today()}.xlsx`;
+  XLSX.writeFile(wb, fileName);
 };
 
 /* ==========================================================================
@@ -1227,7 +1329,7 @@ window.appExportImage = async function(){
   const loading = $('#capture-loading');
   const area = $('#capture-area');
   if(!area || typeof html2canvas === 'undefined') {
-    return alert('캡처 모듈을 불러오는 중입니다. 잠시 후 다시 눌러주세요.');
+    return alert('화면 캡처 모듈을 불러오는 중입니다. 잠시 후 다시 눌러주세요.');
   }
 
   loading.style.display = 'flex';
@@ -1277,7 +1379,7 @@ window.appExportImage = async function(){
 };
 
 /* ==========================================================================
-   📄 안정적인 PDF 저장 (3중 다운로드 보장)
+   📄 안정적인 PDF 저장
    ========================================================================== */
 window.appExportPDF = async function(){
   const b = cur();
@@ -1333,8 +1435,6 @@ window.appExportPDF = async function(){
     const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
 
     let shared = false;
-
-    // 1차 시도: 모바일 시스템 공유창 호출
     if(navigator.canShare && navigator.canShare({ files: [file] })){
       try {
         await navigator.share({
@@ -1345,7 +1445,6 @@ window.appExportPDF = async function(){
       } catch(e){}
     }
 
-    // 2차 시도: 공유창이 안 열리면 자동 다운로드 파이프라인 가동
     if(!shared){
       try {
         const blobUrl = URL.createObjectURL(pdfBlob);
@@ -1360,7 +1459,6 @@ window.appExportPDF = async function(){
           URL.revokeObjectURL(blobUrl);
         }, 1500);
       } catch(downloadErr) {
-        // 3차 시도: 브라우저 PDF 뷰어로 새 탭 열기
         pdf.output('dataurlnewwindow');
       }
     }
