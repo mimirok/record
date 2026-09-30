@@ -5,24 +5,24 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <title>미미록 - 전통주 & 누룩 일지</title>
 
-<!-- ==========================================================================
-     [1구역: 디자인 스타일 CSS]
-     눌렀을 때 쫀득하게 눌리는 터치 피드백 애니메이션이 적용되어 있습니다.
-     ========================================================================== -->
+<!-- 💡 전체 화면 캡처(이미지) 및 실제 PDF 파일 생성을 위한 안정적인 공식 CDN 라이브러리 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
 <style>
   :root {
     box-sizing: border-box;
-    --bg: #f6f1e7;        /* 전체 배경색 */
-    --card: #fffdf8;      /* 카드 배경색 */
-    --ink: #2e2a24;       /* 글자색 */
-    --mute: #8a8072;      /* 설명 글자색 */
-    --line: #e4dccb;      /* 테두리선 */
-    --acc: #a8763e;       /* 강조 갈색 */
-    --acc-dark: #8c5d2b;  /* 버튼 눌렀을 때 짙은 갈색 */
-    --c1: #c9a24a;        /* 곡물 색상 */
-    --c2: #8a5a3b;        /* 누룩 색상 */
-    --c3: #5b93b8;        /* 물/습도 색상 */
-    --c4: #7d9c5a;        /* 부재료/성공 색상 */
+    --bg: #f6f1e7;
+    --card: #fffdf8;
+    --ink: #2e2a24;
+    --mute: #8a8072;
+    --line: #e4dccb;
+    --acc: #a8763e;
+    --acc-dark: #8c5d2b;
+    --c1: #c9a24a;
+    --c2: #8a5a3b;
+    --c3: #5b93b8;
+    --c4: #7d9c5a;
   }
 
   @media (prefers-color-scheme: dark) {
@@ -53,13 +53,8 @@
     padding: 14px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);
     transition: transform 0.1s ease, background 0.1s ease;
   }
-  .card.clickable {
-    cursor: pointer;
-  }
-  .card.clickable:active {
-    transform: scale(0.98);
-    background: #ede6d8;
-  }
+  .card.clickable { cursor: pointer; }
+  .card.clickable:active { transform: scale(0.98); background: #ede6d8; }
 
   .stage-card {
     background: var(--card); border: 1.5px solid var(--line); border-radius: 14px;
@@ -83,43 +78,21 @@
     transition: transform 0.08s ease, filter 0.08s ease, background 0.08s ease;
     user-select: none;
   }
-  button:active {
-    transform: scale(0.94);
-    filter: brightness(0.9);
-  }
-
-  button.p { 
-    background: var(--acc); color: #fff; border-color: var(--acc); font-weight: 600; 
-  }
-  button.p:active {
-    background: var(--acc-dark);
-  }
-
-  button.g { 
-    border: none; color: var(--mute); background: none; padding: 4px 6px; cursor: pointer; 
-  }
-  button.g:active {
-    transform: scale(0.9);
-    color: var(--ink);
-  }
+  button:active { transform: scale(0.94); filter: brightness(0.9); }
+  button.p { background: var(--acc); color: #fff; border-color: var(--acc); font-weight: 600; }
+  button.p:active { background: var(--acc-dark); }
+  button.g { border: none; color: var(--mute); background: none; padding: 4px 6px; cursor: pointer; }
+  button.g:active { transform: scale(0.9); color: var(--ink); }
 
   button.edit-btn { 
     border: 1px solid var(--line); color: var(--acc); background: var(--bg); 
     padding: 4px 10px; font-size: 12px; border-radius: 6px; font-weight: 600;
   }
-  button.edit-btn:active {
-    background: var(--line);
-    transform: scale(0.92);
-  }
-
-  button.share-btn { 
-    background: #fee500; border: 1px solid #e6cf00; color: #191919; 
+  button.save-btn { 
+    background: var(--acc); color: #fff; border-color: var(--acc); 
     font-weight: 600; font-size: 13px; 
   }
-  button.download-btn { 
-    background: var(--card); border: 1.5px solid var(--acc); color: var(--acc); 
-    font-weight: 600; font-size: 13px; 
-  }
+  button.save-btn:active { background: var(--acc-dark); }
 
   .chart-filter-box { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
   .chip { 
@@ -128,12 +101,8 @@
     cursor: pointer; touch-action: manipulation; transition: transform 0.08s ease;
     user-select: none;
   }
-  .chip:active {
-    transform: scale(0.92);
-  }
-  .chip.on { 
-    background: var(--ink); color: var(--card); border-color: var(--ink); font-weight: 600; 
-  }
+  .chip:active { transform: scale(0.92); }
+  .chip.on { background: var(--ink); color: var(--card); border-color: var(--ink); font-weight: 600; }
 
   input, select, textarea {
     font: inherit; width: 100%; padding: 8px; border: 1px solid var(--line);
@@ -169,16 +138,16 @@
   .leg i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; }
   .log-img { max-width: 100%; max-height: 180px; border-radius: 8px; margin-top: 6px; object-fit: cover; border: 1px solid var(--line); }
 
-  @media print {
-    body { background: #fff !important; color: #000 !important; padding: 0 !important; }
-    .wrap { max-width: 100% !important; margin: 0 !important; }
-    button, input, select, textarea, .tabs, .no-print, .chart-filter-box { display: none !important; }
-    .card, .stage-card { border: 1px solid #ccc !important; box-shadow: none !important; break-inside: avoid; }
-    .tag { border: 1px solid #666 !important; color: #000 !important; background: #eee !important; }
+  /* 캡처 중 상태 오버레이 */
+  #capture-loading {
+    display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.6); z-index: 99999; color: #fff;
+    font-size: 16px; font-weight: 600; justify-content: center; align-items: center;
   }
 </style>
 </head>
 <body>
+<div id="capture-loading">변환 중입니다. 잠시만 기다려주세요...</div>
 <div class="wrap" id="app"></div>
 
 <script>
@@ -264,7 +233,6 @@
   }
 
   const tot = (b, k) => getAllItems(b).filter(i => i.cat === k).reduce((a, i) => a + (+i.amt || 0), 0);
-  const all = b => WINE_CATS.reduce((a, c) => a + tot(b, c.k), 0);
 
   function brief(b){
     if(!b) return '';
@@ -419,7 +387,7 @@
     const rightLabel = isNuruk ? '습도(%)만' : '당도(°Bx)만';
     const rightKey = isNuruk ? 'hum' : 'brix';
     const filterChips = `
-      <div class="chart-filter-box no-print">
+      <div class="chart-filter-box no-export">
         <span class="chip ${filter==='all'?'on':''}" onclick="appSetChartFilter('all')">🔍 전체 보기</span>
         <span class="chip ${filter==='temp'?'on':''}" onclick="appSetChartFilter('temp')">🔥 품온만</span>
         <span class="chip ${filter==='room'?'on':''}" onclick="appSetChartFilter('room')">🏠 실온만</span>
@@ -451,7 +419,7 @@
       return `
         <div class="item">
           <span><b>[${catName}]</b> ${esc(item.name)}</span>
-          <span><b>${item.pct}%</b> (${pctLabel}) <button type="button" class="g no-print" onclick="appDelNurukItem(${idx})">✕</button></span>
+          <span><b>${item.pct}%</b> (${pctLabel}) <button type="button" class="g no-export" onclick="appDelNurukItem(${idx})">✕</button></span>
         </div>
       `;
     }).join('') || '<div class="mute" style="padding:6px 0">등록된 재료가 없습니다. 아래에서 추가해주세요.</div>';
@@ -483,7 +451,7 @@
       <div class="card">
         <b>⚖️ 누룩 반죽 목표량 설정 (손실률 10% 자동 계산)</b>
         <div class="mute">완성할 누룩 반죽 무게를 입력하면 손실률 10%를 더해 필요한 재료를 역산합니다.</div>
-        <div class="row" style="margin-top:8px">
+        <div class="row no-export" style="margin-top:8px">
           <div>
             <label>목표 누룩 반죽량 (g)</label>
             <input id="nk_target_dough" type="number" value="${b.targetDough || 1000}" onchange="appUpdateNurukTarget()">
@@ -493,7 +461,7 @@
             <input id="nk_loss_rate" type="number" value="${b.lossRate != null ? b.lossRate : 10}" onchange="appUpdateNurukTarget()">
           </div>
           <div style="flex:0 0 auto">
-            <button type="button" class="p no-print" onclick="appUpdateNurukTarget()">적용 및 저장</button>
+            <button type="button" class="p" onclick="appUpdateNurukTarget()">적용 및 저장</button>
           </div>
         </div>
 
@@ -513,7 +481,7 @@
           ${itemsListHtml}
         </div>
 
-        <div class="calc-box no-print">
+        <div class="calc-box no-export">
           <div style="font-weight:600;font-size:13px;margin-bottom:6px">➕ 재료 추가하기</div>
           <div class="row">
             <div style="flex:1.2">
@@ -575,7 +543,7 @@
       <div class="card">
         <b>🧱 성형 및 디딤 방법 작성란</b>
         <textarea id="nk_molding" rows="3" style="margin-top:8px" placeholder="분쇄도(조분/미분 비율), 디딤틀 규격, 디딤 압력, 볏짚 포장 방식 등을 적어두세요">${esc(b.moldingNote || '')}</textarea>
-        <button type="button" class="p no-print" style="width:100%;margin-top:8px" onclick="appSaveMoldingNote()">성형 방법 저장</button>
+        <button type="button" class="p no-export" style="width:100%;margin-top:8px" onclick="appSaveMoldingNote()">성형 방법 저장</button>
       </div>
     `;
   }
@@ -588,7 +556,7 @@
         <div style="margin-top:6px">${chart(b)}</div>
       </div>
 
-      <div class="card no-print" id="log-input-card">
+      <div class="card no-export" id="log-input-card">
         <b>📝 일일 누룩 관리 기록 / 수정</b>
         <div class="row">
           <div><label>측정일</label><input id="l_d" type="date" value="${today()}"></div>
@@ -620,7 +588,7 @@
               <div>
                 <b>${l.d}</b> <span class="mute">D+${dayN(b.start, l.d)}</span>${l.vent ? '<span class="tag" style="background:var(--c4)">🌀 환기/뒤집음</span>' : ''}
               </div>
-              <div class="no-print">
+              <div class="no-export">
                 <button type="button" class="edit-btn" onclick="appEditNurukLog('${l.d}')">수정</button>
                 <button type="button" class="g" style="color:#d9534f" onclick="appDelLog('${l.d}')">삭제</button>
               </div>
@@ -665,7 +633,7 @@
         return `
           <div class="item">
             <span><span class="dot" style="background:${catInfo.col}"></span>[${catInfo.n}] <b>${esc(item.name)}</b></span>
-            <span>${item.amt}g <button type="button" class="g no-print" onclick="appDelStageItem(${sIdx}, ${iIdx})">✕</button></span>
+            <span>${item.amt}g <button type="button" class="g no-export" onclick="appDelStageItem(${sIdx}, ${iIdx})">✕</button></span>
           </div>
         `;
       }).join('') : '<div class="mute" style="font-size:12px;padding:4px 0">투입된 원료가 없습니다.</div>';
@@ -674,7 +642,7 @@
         <div class="stage-card">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
             <h3 style="margin:0;font-size:15px;color:var(--acc)">🍶 ${esc(stg.name)}</h3>
-            <button type="button" class="g no-print" style="color:#d9534f" onclick="appDelStage(${sIdx})">단계 삭제</button>
+            <button type="button" class="g no-export" style="color:#d9534f" onclick="appDelStage(${sIdx})">단계 삭제</button>
           </div>
 
           <div class="row" style="margin-bottom:8px">
@@ -689,7 +657,7 @@
           
           <div style="margin-bottom:10px">${itemsHtml}</div>
 
-          <div class="row no-print" style="background:var(--bg);padding:8px;border-radius:8px">
+          <div class="row no-export" style="background:var(--bg);padding:8px;border-radius:8px">
             <div style="flex:1">
               <label>분류</label>
               <select id="stg_cat_${sIdx}">
@@ -711,7 +679,7 @@
 
           <label style="margin-top:10px">📝 ${esc(stg.name)} 비고 (전처리, 찌기, 식힘 등)</label>
           <textarea id="stg_note_${sIdx}" rows="2" placeholder="작업 메모를 남겨두세요">${esc(stg.note || '')}</textarea>
-          <button type="button" class="no-print" style="width:100%;margin-top:6px;font-size:12px" onclick="appSaveStageNote(${sIdx})">비고 저장</button>
+          <button type="button" class="no-export" style="width:100%;margin-top:6px;font-size:12px" onclick="appSaveStageNote(${sIdx})">비고 저장</button>
         </div>
       `;
     }).join('');
@@ -739,7 +707,7 @@
         <b>🎯 목표 배합비 점검 (곡물 1 기준)</b>
         <div class="mute">현재 총 곡물량 (<b>${f(g, 0)}g</b>)을 1(100%)로 두고 목표량을 계산합니다.</div>
         
-        <div class="row no-print" style="margin-top:8px">
+        <div class="row no-export" style="margin-top:8px">
           <div>
             <label>목표 누룩 비율 (곡물 대비 %)</label>
             <input id="t_nr" type="number" step="0.5" value="${targetNurukPct}">
@@ -774,7 +742,7 @@
 
       <div style="display:flex;justify-content:space-between;align-items:center;margin:16px 0 8px">
         <h2 style="margin:0">🪜 담금 단계 레이어 (단양주/이양주/삼양주)</h2>
-        <button type="button" class="p no-print" onclick="appAddStage()">+ 덧술 단계 추가</button>
+        <button type="button" class="p no-export" onclick="appAddStage()">+ 덧술 단계 추가</button>
       </div>
 
       ${stagesHtml || '<div class="card mute">단계를 추가해 주세요. (밑술부터 시작)</div>'}
@@ -789,7 +757,7 @@
         <div style="margin-top:6px">${chart(b)}</div>
       </div>
 
-      <div class="card no-print" id="log-input-card">
+      <div class="card no-export" id="log-input-card">
         <b>📝 발효 데이터 기록 / 수정</b>
         <div class="row">
           <div><label>측정일</label><input id="l_d" type="date" value="${today()}"></div>
@@ -817,7 +785,7 @@
                 <div>
                   <b>${l.d}</b> <span class="mute">D+${dayN(b.start, l.d)}</span>${badgeHtml}
                 </div>
-                <div class="no-print">
+                <div class="no-export">
                   <button type="button" class="edit-btn" onclick="appEditWineLog('${l.d}')">수정</button>
                   <button type="button" class="g" style="color:#d9534f" onclick="appDelLog('${l.d}')">삭제</button>
                 </div>
@@ -899,36 +867,38 @@
       const isNuruk = b.type === '누룩';
 
       a.innerHTML = `
-        <div class="no-print" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div id="export-top-bar" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
           <button type="button" class="g" onclick="appGo('list')">← 목록</button>
           <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
-            <button type="button" class="share-btn" onclick="appShareOrSave()">📤 카톡 전송 / 공유</button>
-            <button type="button" class="download-btn" onclick="appPrintPDF()">📄 PDF 저장</button>
+            <button type="button" class="save-btn" onclick="appExportImage()">🖼️ 이미지로 저장</button>
+            <button type="button" class="save-btn" onclick="appExportPDF()">📄 PDF로 저장</button>
           </div>
         </div>
 
-        <div style="margin-top:4px">
-          <span class="tag" style="background:${isNuruk ? 'var(--c2)' : 'var(--acc)'}">${b.type}</span>
-          <span class="mute">시작일 ${b.start} (D+${dayN(b.start)})</span>
-        </div>
-        <h1 style="margin:4px 0">${esc(b.name)}</h1>
-        <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
-          <label style="margin:0;font-size:13px">진행 상태:</label>
-          <select class="no-print" onchange="appSetStatus(this.value)" style="width:auto;padding:4px 8px">
-            ${['발효중','숙성중','건조중','완료','실패'].map(s => `<option ${s === b.status ? 'selected' : ''}>${s}</option>`).join('')}
-          </select>
-        </div>
+        <div id="capture-area">
+          <div style="margin-top:4px">
+            <span class="tag" style="background:${isNuruk ? 'var(--c2)' : 'var(--acc)'}">${b.type}</span>
+            <span class="mute">시작일 ${b.start} (D+${dayN(b.start)})</span>
+          </div>
+          <h1 style="margin:4px 0">${esc(b.name)}</h1>
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+            <label style="margin:0;font-size:13px">진행 상태:</label>
+            <select class="no-export" onchange="appSetStatus(this.value)" style="width:auto;padding:4px 8px">
+              ${['발효중','숙성중','건조중','완료','실패'].map(s => `<option ${s === b.status ? 'selected' : ''}>${s}</option>`).join('')}
+            </select>
+          </div>
 
-        <div class="tabs no-print">
-          <button type="button" class="${view.tab === 'recipe' ? 'on' : ''}" onclick="appTab('recipe')">${isNuruk ? '🧮 누룩 역산 계산기' : '📖 배합비 & 덧술'}</button>
-          <button type="button" class="${view.tab === 'journal' ? 'on' : ''}" onclick="appTab('journal')">${isNuruk ? '🌡 온·습도·환기 일지' : '📝 발효 일지'}</button>
-        </div>
+          <div class="tabs no-export">
+            <button type="button" class="${view.tab === 'recipe' ? 'on' : ''}" onclick="appTab('recipe')">${isNuruk ? '🧮 누룩 역산 계산기' : '📖 배합비 & 덧술'}</button>
+            <button type="button" class="${view.tab === 'journal' ? 'on' : ''}" onclick="appTab('journal')">${isNuruk ? '🌡 온·습도·환기 일지' : '📝 발효 일지'}</button>
+          </div>
 
-        ${view.tab === 'recipe' 
-          ? (isNuruk ? nurukRecipeView(b) : wineRecipeView(b)) 
-          : (isNuruk ? nurukJournalView(b) : wineJournalView(b))}
+          ${view.tab === 'recipe' 
+            ? (isNuruk ? nurukRecipeView(b) : wineRecipeView(b)) 
+            : (isNuruk ? nurukJournalView(b) : wineJournalView(b))}
+        </div>
         
-        <div class="no-print" style="text-align:right;margin-top:10px">
+        <div class="no-export" style="text-align:right;margin-top:10px">
           <button type="button" class="g" style="color:#d9534f" onclick="appDelBatch()">이 배치 영구 삭제</button>
         </div>
       `;
@@ -1206,35 +1176,126 @@
     }
   };
 
-  // 💡 카카오톡 / 스마트폰 시스템 텍스트 공유
-  window.appShareOrSave = async () => {
+  /* ==========================================================================
+     🖼️ 화면 전체 고화질 이미지(PNG) 저장 엔진
+     ========================================================================== */
+  window.appExportImage = async () => {
     const b = cur();
     if(!b) return;
-    const last = (b.logs && b.logs.length) ? b.logs[b.logs.length - 1] : null;
 
-    let shareText = `🍶 [미미록 일지] ${b.name}\n- 구분: ${b.type} (${b.status})\n- 시작일: ${b.start} (D+${dayN(b.start)})\n- ${brief(b)}`;
-    if(last){
-      shareText += `\n- 최근측정(${last.d}): 품온 ${last.temp}°C, 실온 ${last.room}°C` + 
-                    (last.hum ? `, 습도 ${last.hum}%` : '') + 
-                    (last.brix ? `, 당도 ${last.brix}°Bx` : '');
-    }
+    const loading = $('#capture-loading');
+    const area = $('#capture-area');
+    if(!area) return;
 
-    if(navigator.share){
-      try {
-        await navigator.share({
-          title: `[미미록] ${b.name}`,
-          text: shareText
-        });
-      } catch(e){}
-    } else {
-      // PC 등 미지원 환경에서는 클립보드 복사
-      navigator.clipboard.writeText(shareText);
-      alert('일지 요약 내용이 복사되었습니다. 카카오톡 창에 붙여넣기(Ctrl+V) 하세요!');
+    loading.style.display = 'flex';
+
+    // 캡처 전 불필요한 입력 요소 숨김 처리
+    const noExports = area.querySelectorAll('.no-export');
+    noExports.forEach(el => el.style.display = 'none');
+
+    try {
+      const canvas = await html2canvas(area, {
+        scale: 2, // 2배 고해상도 선명한 캡처
+        backgroundColor: getComputedStyle(document.body).backgroundColor || '#f6f1e7',
+        useCORS: true
+      });
+
+      const fileName = `${b.name}_일지_${today()}.png`;
+
+      // 모바일 공유 지원 시 파일 바로 저장창 띄우기
+      canvas.toBlob(async blob => {
+        const file = new File([blob], fileName, { type: 'image/png' });
+        if(navigator.canShare && navigator.canShare({ files: [file] })){
+          try {
+            await navigator.share({
+              title: `[미미록 일지] ${b.name}`,
+              files: [file]
+            });
+          } catch(e){}
+        } else {
+          // PC 다운로드
+          const link = document.createElement('a');
+          link.href = canvas.toDataURL('image/png');
+          link.download = fileName;
+          link.click();
+        }
+      });
+    } catch(err) {
+      alert('이미지 생성 중 오류가 발생했습니다: ' + err.message);
+    } finally {
+      noExports.forEach(el => el.style.display = '');
+      loading.style.display = 'none';
     }
   };
 
-  // PDF 저장 및 인쇄
-  window.appPrintPDF = () => window.print();
+  /* ==========================================================================
+     📄 실제 PDF 파일 생성 및 휴대폰/구글드라이브 직접 저장 엔진
+     ========================================================================== */
+  window.appExportPDF = async () => {
+    const b = cur();
+    if(!b) return;
+
+    const loading = $('#capture-loading');
+    const area = $('#capture-area');
+    if(!area) return;
+
+    loading.style.display = 'flex';
+
+    const noExports = area.querySelectorAll('.no-export');
+    noExports.forEach(el => el.style.display = 'none');
+
+    try {
+      const canvas = await html2canvas(area, {
+        scale: 2,
+        backgroundColor: '#ffffff',
+        useCORS: true
+      });
+
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF('p', 'mm', 'a4');
+
+      const imgWidth = 210; // A4 가로 (mm)
+      const pageHeight = 297; // A4 세로 (mm)
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      // 내용이 길어 한 페이지가 넘어갈 경우 자동 페이지 분할
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+
+      const fileName = `${b.name}_일지_${today()}.pdf`;
+      const pdfBlob = pdf.output('blob');
+      const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+
+      // 모바일: 시스템 저장창(내 파일/구글 드라이브 선택) 직접 호출
+      if(navigator.canShare && navigator.canShare({ files: [file] })){
+        try {
+          await navigator.share({
+            title: `[미미록 PDF] ${b.name}`,
+            text: `${b.name} 양조 및 누룩 일지 PDF 문서입니다.`,
+            files: [file]
+          });
+        } catch(e){}
+      } else {
+        // PC 브라우저 다운로드
+        pdf.save(fileName);
+      }
+    } catch(err) {
+      alert('PDF 생성 중 오류가 발생했습니다: ' + err.message);
+    } finally {
+      noExports.forEach(el => el.style.display = '');
+      loading.style.display = 'none';
+    }
+  };
 
   render();
 })();
