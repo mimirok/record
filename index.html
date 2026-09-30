@@ -577,7 +577,7 @@ function nurukJournalView(b){
       <div class="row">
         <div><label>측정일</label><input id="l_d" type="date" value="${today()}"></div>
         <div><label>품온(°C)</label><input id="l_temp" type="number" step="0.1" placeholder="누룩 내부"></div>
-        <div><label>실온(°C)</label><input id="l_room" type="number" step="0.1" placeholder="방 온도"></div>
+        <div><label>실온(°C)</label><input id="l_room" type="number" step="0.1" placeholder="누룩실 온도"></div>
         <div><label>실내 습도(%)</label><input id="l_hum" type="number" step="1" placeholder="예: 85"></div>
       </div>
 
@@ -841,7 +841,7 @@ function render(){
 
     a.innerHTML = `
       <h1>🍶 미미록 (味美錄)</h1>
-      <div class="sub">전통주 주방문 & 누룩 발효 기록장</div>
+      <div class="sub"> 주방문 & 누룩 발효 기록장</div>
       <button type="button" class="p" style="width:100%;margin:12px 0" onclick="appGo('new')">+ 새 배치 등록</button>
       ${batchCards}
     `;
@@ -853,8 +853,8 @@ function render(){
       <div class="card">
         <label>종류 선택</label>
         <select id="f_type">
-          <option value="막걸리">전통주 (막걸리/약주/탁주 덧술 배합비)</option>
-          <option value="누룩">전통 누룩 (반죽 목표량 역산 계산기 / 온·습도 일지)</option>
+          <option value="막걸리">전통주 (막걸리/약주/탁주)</option>
+          <option value="누룩">전통 누룩 (역산 계산기 / 온·습도 일지)</option>
         </select>
         <label>배치명</label>
         <input id="f_name" placeholder="예: 찰흑미 삼양주 또는 통밀 향온곡 3호">
