@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <title>미미록 - 전통주 & 누룩 일지</title>
 
-<!-- 💡 전체 화면 캡처(이미지) 및 실제 PDF 파일 생성을 위한 안정적인 공식 CDN 라이브러리 -->
+<!-- 캡처 및 PDF 라이브러리 (비동기 로드) -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
@@ -34,7 +34,7 @@
 
   * { 
     box-sizing: border-box;
-    -webkit-tap-highlight-color: rgba(0,0,0,0.08);
+    -webkit-tap-highlight-color: transparent;
   }
 
   body {
@@ -48,13 +48,30 @@
   h2 { font-size: 16px; margin: 0 0 8px; }
   .sub, .mute { color: var(--mute); font-size: 13px; }
 
+  #capture-area {
+    padding: 4px;
+    border-radius: 14px;
+    box-sizing: border-box;
+  }
+  #capture-area.export-mode {
+    padding: 24px 18px !important;
+    background-color: var(--bg) !important;
+  }
+
   .card {
     background: var(--card); border: 1px solid var(--line); border-radius: 14px;
     padding: 14px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);
-    transition: transform 0.1s ease, background 0.1s ease;
+    position: relative;
+    user-select: none;
   }
-  .card.clickable { cursor: pointer; }
-  .card.clickable:active { transform: scale(0.98); background: #ede6d8; }
+  .card.clickable { 
+    cursor: pointer; 
+    transition: transform 0.08s ease, background 0.08s ease;
+  }
+  .card.clickable:active { 
+    transform: scale(0.97); 
+    background: #ede6d8; 
+  }
 
   .stage-card {
     background: var(--card); border: 1.5px solid var(--line); border-radius: 14px;
@@ -71,34 +88,41 @@
   .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; }
   .row > * { flex: 1; min-width: 70px; }
 
+  /* 💡 터치 미스 없는 고반응 버튼 스타일 */
   button {
     font: inherit; border: 1px solid var(--line); background: var(--card);
-    color: var(--ink); border-radius: 8px; padding: 8px 12px; cursor: pointer;
+    color: var(--ink); border-radius: 8px; padding: 10px 14px; cursor: pointer;
     touch-action: manipulation;
-    transition: transform 0.08s ease, filter 0.08s ease, background 0.08s ease;
+    transition: transform 0.06s ease, filter 0.06s ease;
     user-select: none;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
   }
-  button:active { transform: scale(0.94); filter: brightness(0.9); }
+  button:active { 
+    transform: scale(0.93) !important; 
+    filter: brightness(0.88); 
+  }
+
   button.p { background: var(--acc); color: #fff; border-color: var(--acc); font-weight: 600; }
   button.p:active { background: var(--acc-dark); }
-  button.g { border: none; color: var(--mute); background: none; padding: 4px 6px; cursor: pointer; }
-  button.g:active { transform: scale(0.9); color: var(--ink); }
+  button.g { border: none; color: var(--mute); background: none; padding: 6px 8px; cursor: pointer; }
+  button.g:active { color: var(--ink); transform: scale(0.9); }
 
   button.edit-btn { 
     border: 1px solid var(--line); color: var(--acc); background: var(--bg); 
-    padding: 4px 10px; font-size: 12px; border-radius: 6px; font-weight: 600;
+    padding: 5px 10px; font-size: 12px; border-radius: 6px; font-weight: 600;
   }
   button.save-btn { 
     background: var(--acc); color: #fff; border-color: var(--acc); 
-    font-weight: 600; font-size: 13px; 
+    font-weight: 600; font-size: 13px; padding: 8px 12px;
   }
-  button.save-btn:active { background: var(--acc-dark); }
 
   .chart-filter-box { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
   .chip { 
-    font-size: 11px; padding: 5px 11px; border-radius: 99px; 
+    font-size: 11px; padding: 6px 12px; border-radius: 99px; 
     border: 1px solid var(--line); background: var(--card); color: var(--mute); 
-    cursor: pointer; touch-action: manipulation; transition: transform 0.08s ease;
+    cursor: pointer; touch-action: manipulation; transition: transform 0.06s ease;
     user-select: none;
   }
   .chip:active { transform: scale(0.92); }
@@ -138,458 +162,634 @@
   .leg i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; }
   .log-img { max-width: 100%; max-height: 180px; border-radius: 8px; margin-top: 6px; object-fit: cover; border: 1px solid var(--line); }
 
-  /* 캡처 중 상태 오버레이 */
+  /* 💡 터치 방해 금지 설정 (클릭을 절대로 막지 않음) */
   #capture-loading {
-    display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    display: none; 
+    pointer-events: none; /* 클릭 가로챔 원천 차단 */
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
     background: rgba(0,0,0,0.6); z-index: 99999; color: #fff;
     font-size: 16px; font-weight: 600; justify-content: center; align-items: center;
   }
 </style>
 </head>
 <body>
-<div id="capture-loading">변환 중입니다. 잠시만 기다려주세요...</div>
+<div id="capture-loading">저장 중입니다...</div>
 <div class="wrap" id="app"></div>
 
 <script>
-(function(){
-  const KEY = 'mimi-brew-nuruk-v3';
-  
-  const WINE_CATS = [
-    { k: 'grain', n: '곡물', ic: '🌾', col: 'var(--c1)', ph: '예) 멥쌀, 찹쌀' },
-    { k: 'nuruk', n: '누룩', ic: '🟤', col: 'var(--c2)', ph: '예) 송학곡자, 향온곡' },
-    { k: 'water', n: '물',   ic: '💧', col: 'var(--c3)', ph: '예) 정수 물' },
-    { k: 'extra', n: '부재료',ic: '🍇', col: 'var(--c4)', ph: '예) 과일, 약재, 효모' }
+// 💡 전역 함수를 즉시 실행 함수 바깥에 선언하여 HTML 버튼 이벤트 바인딩 보장
+let db = [];
+let view = { page: 'list', id: null, tab: 'recipe', chartFilter: 'all' };
+
+const KEY = 'mimi-brew-nuruk-v4';
+const WINE_CATS = [
+  { k: 'grain', n: '곡물', ic: '🌾', col: 'var(--c1)' },
+  { k: 'nuruk', n: '누룩', ic: '🟤', col: 'var(--c2)' },
+  { k: 'water', n: '물',   ic: '💧', col: 'var(--c3)' },
+  { k: 'extra', n: '부재료',ic: '🍇', col: 'var(--c4)' }
+];
+
+const today = () => new Date().toISOString().slice(0, 10);
+const dayN = (s, d = today()) => Math.round((new Date(d) - new Date(s)) / 864e5);
+const ago = n => { const d = new Date(); d.setDate(d.getDate() - n); return d.toISOString().slice(0, 10); };
+const it = (cat, name, amt, pct=0) => ({ cat, name, amt: +amt || 0, pct: +pct || 0 });
+
+function seed(){
+  return [
+    {
+      id: 1, type: '막걸리', name: '찰흑미 삼양주', start: ago(6), status: '발효중',
+      target: { nurukRatio: 10.0, waterRatio: 100.0 },
+      stages: [
+        { name: '밑술 (1단계)', date: ago(6), items: [it('grain', '멥쌀 범벅', 1000), it('nuruk', '향온곡', 300), it('water', '끓인 물', 1500)], note: '25도 냉각 후 누룩 혼화' },
+        { name: '1차 덧술 (2단계)', date: ago(4), items: [it('grain', '찹쌀 죽', 1500), it('water', '물', 1500)], note: '찹쌀죽 차게 식혀 투입' },
+        { name: '2차 덧술 (3단계)', date: ago(2), items: [it('grain', '찰흑미 고두밥', 1500), it('water', '물', 1000)], note: '고두밥 치대기 후 안정' }
+      ],
+      logs: [
+        { d: ago(6), temp: 23.5, room: 22.0, brix: '', ph: 5.8, stir: true, note: '밑술 담금' },
+        { d: ago(4), temp: 27.2, room: 23.0, brix: 21.0, ph: 4.2, stir: true, note: '1차 덧술' },
+        { d: ago(0), temp: 21.5, room: 20.5, brix: 9.0, ph: 3.8, stir: false, note: '발효 진행' }
+      ]
+    },
+    {
+      id: 2, type: '누룩', name: '가을 향온곡 (계산기 배치)', start: ago(8), status: '발효중',
+      targetDough: 1000,
+      lossRate: 10,
+      moldingNote: '통밀을 거칠게 분쇄 후 물과 치대어 디딤틀에 볏짚 깔고 압착 성형함.',
+      recipeItems: [
+        { cat: 'grain', name: '통밀가루', pct: 80 },
+        { cat: 'grain', name: '녹두가루', pct: 20 },
+        { cat: 'water', name: '반죽 생수', pct: 25 },
+        { cat: 'extra', name: '모균/볏짚가루', pct: 2 }
+      ],
+      logs: [
+        { d: ago(8), temp: 26.0, room: 24.0, hum: 85, vent: false, img: '', note: '성형 후 띄우기 방 입실, 포대 덮음' },
+        { d: ago(6), temp: 37.5, room: 25.0, hum: 90, vent: true,  img: '', note: '품온 최고점! 상하 반전 및 30분 환기' },
+        { d: ago(3), temp: 32.0, room: 23.5, hum: 75, vent: true,  img: '', note: '백색 균사 번식 시작' },
+        { d: ago(0), temp: 25.0, room: 22.0, hum: 60, vent: true,  img: '', note: '열기 가라앉음, 건조 준비' }
+      ]
+    }
   ];
+}
 
-  const today = () => new Date().toISOString().slice(0, 10);
-  const dayN = (s, d = today()) => Math.round((new Date(d) - new Date(s)) / 864e5);
-  const ago = n => { const d = new Date(); d.setDate(d.getDate() - n); return d.toISOString().slice(0, 10); };
-  const it = (cat, name, amt, pct=0) => ({ cat, name, amt: +amt || 0, pct: +pct || 0 });
+function loadDB(){
+  try {
+    const r = localStorage.getItem(KEY);
+    if(r) return JSON.parse(r);
+  } catch(e) {}
+  return seed();
+}
 
-  function seed(){
-    return [
-      {
-        id: 1, type: '막걸리', name: '찰흑미 삼양주', start: ago(6), status: '발효중',
-        target: { nurukRatio: 10.0, waterRatio: 100.0 },
-        stages: [
-          { name: '밑술 (1단계)', date: ago(6), items: [it('grain', '멥쌀 범벅', 1000), it('nuruk', '향온곡', 300), it('water', '끓인 물', 1500)], note: '25도 냉각 후 누룩 혼화' },
-          { name: '1차 덧술 (2단계)', date: ago(4), items: [it('grain', '찹쌀 죽', 1500), it('water', '물', 1500)], note: '찹쌀죽 차게 식혀 투입' },
-          { name: '2차 덧술 (3단계)', date: ago(2), items: [it('grain', '찰흑미 고두밥', 1500), it('water', '물', 1000)], note: '고두밥 치대기 후 안정' }
-        ],
-        logs: [
-          { d: ago(6), temp: 23.5, room: 22.0, brix: '', ph: 5.8, stir: true, note: '밑술 담금' },
-          { d: ago(4), temp: 27.2, room: 23.0, brix: 21.0, ph: 4.2, stir: true, note: '1차 덧술' },
-          { d: ago(0), temp: 21.5, room: 20.5, brix: 9.0, ph: 3.8, stir: false, note: '발효 진행' }
-        ]
-      },
-      {
-        id: 2, type: '누룩', name: '가을 향온곡 (계산기 배치)', start: ago(8), status: '발효중',
-        targetDough: 1000,
-        lossRate: 10,
-        moldingNote: '통밀을 거칠게 분쇄 후 물과 치대어 디딤틀에 볏짚 깔고 압착 성형함.',
-        recipeItems: [
-          { cat: 'grain', name: '통밀가루', pct: 80 },
-          { cat: 'grain', name: '녹두가루', pct: 20 },
-          { cat: 'water', name: '반죽 생수', pct: 25 },
-          { cat: 'extra', name: '모균/볏짚가루', pct: 2 }
-        ],
-        logs: [
-          { d: ago(8), temp: 26.0, room: 24.0, hum: 85, vent: false, img: '', note: '성형 후 띄우기 방 입실, 포대 덮음' },
-          { d: ago(6), temp: 37.5, room: 25.0, hum: 90, vent: true,  img: '', note: '품온 최고점! 상하 반전 및 30분 환기' },
-          { d: ago(3), temp: 32.0, room: 23.5, hum: 75, vent: true,  img: '', note: '백색 균사 번식 시작' },
-          { d: ago(0), temp: 25.0, room: 22.0, hum: 60, vent: true,  img: '', note: '열기 가라앉음, 건조 준비' }
-        ]
-      }
-    ];
-  }
+function saveDB(){
+  try {
+    localStorage.setItem(KEY, JSON.stringify(db));
+  } catch(e) {}
+}
 
-  function load(){
-    try {
-      const r = localStorage.getItem(KEY);
-      if(r) return JSON.parse(r);
-    } catch(e) {}
-    return seed();
-  }
+db = loadDB();
 
-  function save(){
-    try {
-      localStorage.setItem(KEY, JSON.stringify(db));
-    } catch(e) {}
-  }
+const $ = s => document.querySelector(s);
+const v = id => { const el = $('#' + id); return el ? el.value : ''; };
+const cur = () => db.find(b => b.id === view.id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const f = (n, d = 1) => Number.isFinite(+n) ? (+n).toFixed(d) : '-';
 
-  let db = load();
-  let view = { page: 'list', id: null, tab: 'recipe', chartFilter: 'all' };
+function getAllItems(b){
+  if(!b || !b.stages) return [];
+  return b.stages.flatMap(s => s.items || []);
+}
 
-  const $ = s => document.querySelector(s);
-  const v = id => { const el = $('#' + id); return el ? el.value : ''; };
-  const cur = () => db.find(b => b.id === view.id);
-  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const f = (n, d = 1) => Number.isFinite(+n) ? (+n).toFixed(d) : '-';
+const tot = (b, k) => getAllItems(b).filter(i => i.cat === k).reduce((a, i) => a + (+i.amt || 0), 0);
 
-  function getAllItems(b){
-    if(!b) return [];
-    if(!b.stages || !b.stages.length) return [];
-    return b.stages.flatMap(s => s.items || []);
-  }
-
-  const tot = (b, k) => getAllItems(b).filter(i => i.cat === k).reduce((a, i) => a + (+i.amt || 0), 0);
-
-  function brief(b){
-    if(!b) return '';
-    if(b.type === '누룩'){
-      const calc = calcNuruk(b);
-      return `목표 반죽 ${b.targetDough || 1000}g (손실10% ➔ ${f(calc.reqDough, 0)}g) · 곡물 ${f(calc.grainTotal, 0)}g + 물 ${f(calc.waterTotal, 0)}g`;
-    } else {
-      const g = tot(b, 'grain');
-      if(!g) return '곡물 미입력';
-      const nRatio = (tot(b, 'nuruk') / g).toFixed(2);
-      const wRatio = (tot(b, 'water') / g).toFixed(2);
-      return `곡물 1 : 누룩 ${nRatio} : 물 ${wRatio}`;
-    }
-  }
-
-  function diff(curVal, tgtVal, unit){
-    const d = Math.round(tgtVal - curVal);
-    if(Math.abs(d) < 1) return '<span class="ok">✓ 목표 일치</span>';
-    return d > 0 ? `+${d}${unit} 부족` : `−${Math.abs(d)}${unit} 초과`;
-  }
-
-  function getStageContext(b, targetDate){
-    if(!b || b.type === '누룩') return null;
-    if(!b.stages || !b.stages.length) return null;
-    const sorted = b.stages.filter(s => s.date).slice().sort((x, y) => x.date.localeCompare(y.date));
-    if(!sorted.length) return null;
-
-    const exact = sorted.find(s => s.date === targetDate);
-    if(exact) return { title: exact.name, isEventDay: true, text: `✨ [${exact.name}] 담금일` };
-
-    let current = null;
-    for(let i = 0; i < sorted.length; i++){
-      if(sorted[i].date <= targetDate) current = sorted[i];
-      else break;
-    }
-    if(current){
-      const diffDay = dayN(current.date, targetDate);
-      return { title: current.name, isEventDay: false, text: `⏳ [${current.name}] ${diffDay}일차` };
-    }
-    return { title: '준비', isEventDay: false, text: '담금 준비' };
-  }
-
-  function calcNuruk(b){
-    const targetDough = +b.targetDough || 1000;
-    const lossRate = b.lossRate != null ? +b.lossRate : 10;
-    const reqDough = targetDough * (1 + (lossRate / 100));
-
-    const items = b.recipeItems || [];
-    const grains = items.filter(i => i.cat === 'grain');
-    const waters = items.filter(i => i.cat === 'water');
-    const extras = items.filter(i => i.cat === 'extra');
-
-    const grainPctSum = grains.reduce((a, i) => a + (+i.pct || 0), 0);
-    const waterPctSum = waters.reduce((a, i) => a + (+i.pct || 0), 0);
-
-    const grainTotal = waterPctSum > 0 ? (reqDough / (1 + (waterPctSum / 100))) : reqDough;
-    const waterTotal = reqDough - grainTotal;
-
-    const calculatedGrains = grains.map(g => ({
-      name: g.name,
-      pct: g.pct,
-      amt: grainPctSum > 0 ? (grainTotal * (g.pct / grainPctSum)) : 0
-    }));
-
-    const calculatedWaters = waters.map(w => ({
-      name: w.name,
-      pct: w.pct,
-      amt: grainTotal * (w.pct / 100)
-    }));
-
-    const calculatedExtras = extras.map(e => ({
-      name: e.name,
-      pct: e.pct,
-      amt: grainTotal * (e.pct / 100)
-    }));
-
-    return {
-      targetDough,
-      lossRate,
-      reqDough,
-      grainTotal,
-      waterTotal,
-      grainPctSum,
-      waterPctSum,
-      calculatedGrains,
-      calculatedWaters,
-      calculatedExtras
-    };
-  }
-
-  function chart(b){
-    const isNuruk = b.type === '누룩';
-    const filter = view.chartFilter || 'all';
-    const L = (b.logs || []).filter(l => l.temp !== '' || l.room !== '' || l.hum !== '' || l.brix !== '');
-    if(L.length < 2) return '<p class="mute">기록이 2개 이상 쌓이면 그래프가 표시됩니다.</p>';
-
-    const W = 320, H = 175, pl = 30, pr = 32, pt = 22, pb = 24;
-    const iw = W - pl - pr, ih = H - pt - pb;
-
-    const days = L.map(l => dayN(b.start, l.d));
-    const d0 = Math.min(...days), d1 = Math.max(...days);
-    const dx = (d1 - d0) || 1;
-    const X = d => pl + ((d - d0) / dx) * iw;
-
-    let tv = [];
-    if(filter === 'temp') tv = L.map(l => l.temp).filter(x => x !== '' && x != null).map(Number);
-    else if(filter === 'room') tv = L.map(l => l.room).filter(x => x !== '' && x != null).map(Number);
-    else tv = L.flatMap(l => [l.temp, l.room]).filter(x => x !== '' && x != null).map(Number);
-
-    const t0 = tv.length ? Math.floor(Math.min(...tv) - 1) : 15;
-    const t1 = tv.length ? Math.ceil(Math.max(...tv) + 1) : 42;
-    const YT = y => pt + ih - ((+y - t0) / (t1 - t0 || 1)) * ih;
-
-    const rightVals = L.map(l => isNuruk ? l.hum : l.brix).filter(x => x !== '' && x != null).map(Number);
-    const r0 = isNuruk ? 30 : 0;
-    const r1 = isNuruk ? 100 : 30;
-    const YR = y => pt + ih - ((+y - r0) / (r1 - r0 || 1)) * ih;
-
-    const line = (key, YFunc, col, dash) => {
-      const pts = L.map((l, i) => (l[key] !== '' && l[key] != null) ? [X(days[i]), YFunc(+l[key]), l] : null).filter(Boolean);
-      if(!pts.length) return '';
-      const pathStr = pts.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
-      const dots = pts.map(p => `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3" fill="${col}"><title>${p[2].d}: ${p[2][key]}</title></circle>`).join('');
-      return `<polyline points="${pathStr}" fill="none" stroke="${col}" stroke-width="2" ${dash ? 'stroke-dasharray="3 3"' : ''}/>${dots}`;
-    };
-
-    let grid = '';
-    const showTempAxis = (filter === 'all' || filter === 'temp' || filter === 'room');
-    const showRightAxis = (filter === 'all' || filter === 'hum' || filter === 'brix');
-
-    for(let i = 0; i <= 3; i++){
-      const y = pt + (ih * i) / 3;
-      const tVal = Math.round(t1 - ((t1 - t0) * i) / 3);
-      const rVal = Math.round(r1 - ((r1 - r0) * i) / 3);
-      grid += `<line x1="${pl}" x2="${W-pr}" y1="${y}" y2="${y}" stroke="var(--line)"/>`;
-      if(showTempAxis) grid += `<text x="${pl-4}" y="${y+3}" text-anchor="end">${tVal}°</text>`;
-      if(showRightAxis) grid += `<text x="${W-pr+4}" y="${y+3}">${rVal}${isNuruk ? '%' : ''}</text>`;
-    }
-
-    const stepDay = Math.max(1, Math.ceil((d1 - d0 + 1) / 5));
-    for(let d = d0; d <= d1; d += stepDay){
-      grid += `<text x="${X(d)}" y="${H-8}" text-anchor="middle">D+${d}</text>`;
-    }
-
-    let linesHtml = '';
-    if(filter === 'all' || filter === 'room') linesHtml += line('room', YT, 'var(--mute)', true);
-    if(filter === 'all' || filter === 'temp') linesHtml += line('temp', YT, 'var(--acc)', false);
-    if(filter === 'all' || filter === 'hum' || filter === 'brix'){
-      linesHtml += line(isNuruk ? 'hum' : 'brix', YR, 'var(--c3)', false);
-    }
-
-    const rightLabel = isNuruk ? '습도(%)만' : '당도(°Bx)만';
-    const rightKey = isNuruk ? 'hum' : 'brix';
-    const filterChips = `
-      <div class="chart-filter-box no-export">
-        <span class="chip ${filter==='all'?'on':''}" onclick="appSetChartFilter('all')">🔍 전체 보기</span>
-        <span class="chip ${filter==='temp'?'on':''}" onclick="appSetChartFilter('temp')">🔥 품온만</span>
-        <span class="chip ${filter==='room'?'on':''}" onclick="appSetChartFilter('room')">🏠 실온만</span>
-        <span class="chip ${filter===rightKey?'on':''}" onclick="appSetChartFilter('${rightKey}')">💧 ${rightLabel}</span>
-      </div>
-    `;
-
-    return `
-      ${filterChips}
-      <svg class="chart" viewBox="0 0 ${W} ${H}" width="100%">
-        ${grid}
-        ${linesHtml}
-      </svg>
-      <div class="leg">
-        ${(filter==='all'||filter==='temp') ? '<span><i style="background:var(--acc)"></i>품온(°C)</span>' : ''}
-        ${(filter==='all'||filter==='room') ? '<span><i style="background:var(--mute)"></i>실온(°C)</span>' : ''}
-        ${(filter==='all'||filter===rightKey) ? `<span><i style="background:var(--c3)"></i>${isNuruk ? '습도(%)' : '당도(°Bx)'}</span>` : ''}
-      </div>
-    `;
-  }
-
-  function nurukRecipeView(b){
-    if(!b.recipeItems) b.recipeItems = [];
+function brief(b){
+  if(!b) return '';
+  if(b.type === '누룩'){
     const calc = calcNuruk(b);
+    return `목표 반죽 ${b.targetDough || 1000}g (손실10% ➔ ${f(calc.reqDough, 0)}g) · 곡물 ${f(calc.grainTotal, 0)}g + 물 ${f(calc.waterTotal, 0)}g`;
+  } else {
+    const g = tot(b, 'grain');
+    if(!g) return '곡물 미입력';
+    const nRatio = (tot(b, 'nuruk') / g).toFixed(2);
+    const wRatio = (tot(b, 'water') / g).toFixed(2);
+    return `곡물 1 : 누룩 ${nRatio} : 물 ${wRatio}`;
+  }
+}
 
-    const itemsListHtml = b.recipeItems.map((item, idx) => {
-      const catName = item.cat === 'grain' ? '🌾 곡물' : item.cat === 'water' ? '💧 물' : '🌿 부재료';
-      const pctLabel = item.cat === 'grain' ? '곡물 내 지분' : '곡물 대비';
-      return `
-        <div class="item">
-          <span><b>[${catName}]</b> ${esc(item.name)}</span>
-          <span><b>${item.pct}%</b> (${pctLabel}) <button type="button" class="g no-export" onclick="appDelNurukItem(${idx})">✕</button></span>
-        </div>
-      `;
-    }).join('') || '<div class="mute" style="padding:6px 0">등록된 재료가 없습니다. 아래에서 추가해주세요.</div>';
+function diff(curVal, tgtVal, unit){
+  const d = Math.round(tgtVal - curVal);
+  if(Math.abs(d) < 1) return '<span class="ok">✓ 목표 일치</span>';
+  return d > 0 ? `+${d}${unit} 부족` : `−${Math.abs(d)}${unit} 초과`;
+}
 
-    const grainRows = calc.calculatedGrains.map(g => `
-      <div class="item">
-        <span>🌾 ${esc(g.name)} (${g.pct}%)</span>
-        <span style="font-weight:700;color:var(--c1)">${f(g.amt, 1)} g</span>
-      </div>
-    `).join('');
+function getStageContext(b, targetDate){
+  if(!b || b.type === '누룩' || !b.stages) return null;
+  const sorted = b.stages.filter(s => s.date).slice().sort((x, y) => x.date.localeCompare(y.date));
+  if(!sorted.length) return null;
 
-    const waterRows = calc.calculatedWaters.map(w => `
-      <div class="item">
-        <span>💧 ${esc(w.name)} (곡물대비 ${w.pct}%)</span>
-        <span style="font-weight:700;color:var(--c3)">${f(w.amt, 1)} g</span>
-      </div>
-    `).join('');
+  const exact = sorted.find(s => s.date === targetDate);
+  if(exact) return { title: exact.name, isEventDay: true, text: `✨ [${exact.name}] 담금일` };
 
-    const extraRows = calc.calculatedExtras.map(e => `
-      <div class="item">
-        <span>🌿 ${esc(e.name)} (곡물대비 ${e.pct}%)</span>
-        <span style="font-weight:700;color:var(--c4)">${f(e.amt, 1)} g <span class="mute" style="font-size:11px">(반죽무게 제외)</span></span>
-      </div>
-    `).join('');
+  let current = null;
+  for(let i = 0; i < sorted.length; i++){
+    if(sorted[i].date <= targetDate) current = sorted[i];
+    else break;
+  }
+  if(current){
+    const diffDay = dayN(current.date, targetDate);
+    return { title: current.name, isEventDay: false, text: `⏳ [${current.name}] ${diffDay}일차` };
+  }
+  return { title: '준비', isEventDay: false, text: '담금 준비' };
+}
 
-    const is100 = Math.abs(calc.grainPctSum - 100) < 0.1;
+function calcNuruk(b){
+  const targetDough = +b.targetDough || 1000;
+  const lossRate = b.lossRate != null ? +b.lossRate : 10;
+  const reqDough = targetDough * (1 + (lossRate / 100));
 
+  const items = b.recipeItems || [];
+  const grains = items.filter(i => i.cat === 'grain');
+  const waters = items.filter(i => i.cat === 'water');
+  const extras = items.filter(i => i.cat === 'extra');
+
+  const grainPctSum = grains.reduce((a, i) => a + (+i.pct || 0), 0);
+  const waterPctSum = waters.reduce((a, i) => a + (+i.pct || 0), 0);
+
+  const grainTotal = waterPctSum > 0 ? (reqDough / (1 + (waterPctSum / 100))) : reqDough;
+  const waterTotal = reqDough - grainTotal;
+
+  const calculatedGrains = grains.map(g => ({
+    name: g.name,
+    pct: g.pct,
+    amt: grainPctSum > 0 ? (grainTotal * (g.pct / grainPctSum)) : 0
+  }));
+
+  const calculatedWaters = waters.map(w => ({
+    name: w.name,
+    pct: w.pct,
+    amt: grainTotal * (w.pct / 100)
+  }));
+
+  const calculatedExtras = extras.map(e => ({
+    name: e.name,
+    pct: e.pct,
+    amt: grainTotal * (e.pct / 100)
+  }));
+
+  return {
+    targetDough, lossRate, reqDough, grainTotal, waterTotal,
+    grainPctSum, waterPctSum, calculatedGrains, calculatedWaters, calculatedExtras
+  };
+}
+
+function chart(b){
+  const isNuruk = b.type === '누룩';
+  const filter = view.chartFilter || 'all';
+  const L = (b.logs || []).filter(l => l.temp !== '' || l.room !== '' || l.hum !== '' || l.brix !== '');
+  if(L.length < 2) return '<p class="mute">기록이 2개 이상 쌓이면 그래프가 표시됩니다.</p>';
+
+  const W = 320, H = 175, pl = 30, pr = 32, pt = 22, pb = 24;
+  const iw = W - pl - pr, ih = H - pt - pb;
+
+  const days = L.map(l => dayN(b.start, l.d));
+  const d0 = Math.min(...days), d1 = Math.max(...days);
+  const dx = (d1 - d0) || 1;
+  const X = d => pl + ((d - d0) / dx) * iw;
+
+  let tv = [];
+  if(filter === 'temp') tv = L.map(l => l.temp).filter(x => x !== '' && x != null).map(Number);
+  else if(filter === 'room') tv = L.map(l => l.room).filter(x => x !== '' && x != null).map(Number);
+  else tv = L.flatMap(l => [l.temp, l.room]).filter(x => x !== '' && x != null).map(Number);
+
+  const t0 = tv.length ? Math.floor(Math.min(...tv) - 1) : 15;
+  const t1 = tv.length ? Math.ceil(Math.max(...tv) + 1) : 42;
+  const YT = y => pt + ih - ((+y - t0) / (t1 - t0 || 1)) * ih;
+
+  const r0 = isNuruk ? 30 : 0;
+  const r1 = isNuruk ? 100 : 30;
+  const YR = y => pt + ih - ((+y - r0) / (r1 - r0 || 1)) * ih;
+
+  const line = (key, YFunc, col, dash) => {
+    const pts = L.map((l, i) => (l[key] !== '' && l[key] != null) ? [X(days[i]), YFunc(+l[key]), l] : null).filter(Boolean);
+    if(!pts.length) return '';
+    const pathStr = pts.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
+    const dots = pts.map(p => `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3" fill="${col}"><title>${p[2].d}: ${p[2][key]}</title></circle>`).join('');
+    return `<polyline points="${pathStr}" fill="none" stroke="${col}" stroke-width="2" ${dash ? 'stroke-dasharray="3 3"' : ''}/>${dots}`;
+  };
+
+  let grid = '';
+  const showTempAxis = (filter === 'all' || filter === 'temp' || filter === 'room');
+  const showRightAxis = (filter === 'all' || filter === 'hum' || filter === 'brix');
+
+  for(let i = 0; i <= 3; i++){
+    const y = pt + (ih * i) / 3;
+    const tVal = Math.round(t1 - ((t1 - t0) * i) / 3);
+    const rVal = Math.round(r1 - ((r1 - r0) * i) / 3);
+    grid += `<line x1="${pl}" x2="${W-pr}" y1="${y}" y2="${y}" stroke="var(--line)"/>`;
+    if(showTempAxis) grid += `<text x="${pl-4}" y="${y+3}" text-anchor="end">${tVal}°</text>`;
+    if(showRightAxis) grid += `<text x="${W-pr+4}" y="${y+3}">${rVal}${isNuruk ? '%' : ''}</text>`;
+  }
+
+  const stepDay = Math.max(1, Math.ceil((d1 - d0 + 1) / 5));
+  for(let d = d0; d <= d1; d += stepDay){
+    grid += `<text x="${X(d)}" y="${H-8}" text-anchor="middle">D+${d}</text>`;
+  }
+
+  let linesHtml = '';
+  if(filter === 'all' || filter === 'room') linesHtml += line('room', YT, 'var(--mute)', true);
+  if(filter === 'all' || filter === 'temp') linesHtml += line('temp', YT, 'var(--acc)', false);
+  if(filter === 'all' || filter === 'hum' || filter === 'brix'){
+    linesHtml += line(isNuruk ? 'hum' : 'brix', YR, 'var(--c3)', false);
+  }
+
+  const rightLabel = isNuruk ? '습도(%)만' : '당도(°Bx)만';
+  const rightKey = isNuruk ? 'hum' : 'brix';
+  const filterChips = `
+    <div class="chart-filter-box no-export">
+      <span class="chip ${filter==='all'?'on':''}" onclick="appSetChartFilter('all')">🔍 전체</span>
+      <span class="chip ${filter==='temp'?'on':''}" onclick="appSetChartFilter('temp')">🔥 품온만</span>
+      <span class="chip ${filter==='room'?'on':''}" onclick="appSetChartFilter('room')">🏠 실온만</span>
+      <span class="chip ${filter===rightKey?'on':''}" onclick="appSetChartFilter('${rightKey}')">💧 ${rightLabel}</span>
+    </div>
+  `;
+
+  return `
+    ${filterChips}
+    <svg class="chart" viewBox="0 0 ${W} ${H}" width="100%">
+      ${grid}
+      ${linesHtml}
+    </svg>
+    <div class="leg">
+      ${(filter==='all'||filter==='temp') ? '<span><i style="background:var(--acc)"></i>품온(°C)</span>' : ''}
+      ${(filter==='all'||filter==='room') ? '<span><i style="background:var(--mute)"></i>실온(°C)</span>' : ''}
+      ${(filter==='all'||filter===rightKey) ? `<span><i style="background:var(--c3)"></i>${isNuruk ? '습도(%)' : '당도(°Bx)'}</span>` : ''}
+    </div>
+  `;
+}
+
+function nurukRecipeView(b){
+  if(!b.recipeItems) b.recipeItems = [];
+  const calc = calcNuruk(b);
+
+  const itemsListHtml = b.recipeItems.map((item, idx) => {
+    const catName = item.cat === 'grain' ? '🌾 곡물' : item.cat === 'water' ? '💧 물' : '🌿 부재료';
+    const pctLabel = item.cat === 'grain' ? '곡물 내 지분' : '곡물 대비';
     return `
-      <div class="card">
-        <b>⚖️ 누룩 반죽 목표량 설정 (손실률 10% 자동 계산)</b>
-        <div class="mute">완성할 누룩 반죽 무게를 입력하면 손실률 10%를 더해 필요한 재료를 역산합니다.</div>
-        <div class="row no-export" style="margin-top:8px">
-          <div>
-            <label>목표 누룩 반죽량 (g)</label>
-            <input id="nk_target_dough" type="number" value="${b.targetDough || 1000}" onchange="appUpdateNurukTarget()">
+      <div class="item">
+        <span><b>[${catName}]</b> ${esc(item.name)}</span>
+        <span><b>${item.pct}%</b> (${pctLabel}) <button type="button" class="g no-export" onclick="appDelNurukItem(${idx})">✕</button></span>
+      </div>
+    `;
+  }).join('') || '<div class="mute" style="padding:6px 0">등록된 재료가 없습니다. 아래에서 추가해주세요.</div>';
+
+  const grainRows = calc.calculatedGrains.map(g => `
+    <div class="item">
+      <span>🌾 ${esc(g.name)} (${g.pct}%)</span>
+      <span style="font-weight:700;color:var(--c1)">${f(g.amt, 1)} g</span>
+    </div>
+  `).join('');
+
+  const waterRows = calc.calculatedWaters.map(w => `
+    <div class="item">
+      <span>💧 ${esc(w.name)} (곡물대비 ${w.pct}%)</span>
+      <span style="font-weight:700;color:var(--c3)">${f(w.amt, 1)} g</span>
+    </div>
+  `).join('');
+
+  const extraRows = calc.calculatedExtras.map(e => `
+    <div class="item">
+      <span>🌿 ${esc(e.name)} (곡물대비 ${e.pct}%)</span>
+      <span style="font-weight:700;color:var(--c4)">${f(e.amt, 1)} g <span class="mute" style="font-size:11px">(반죽무게 제외)</span></span>
+    </div>
+  `).join('');
+
+  const is100 = Math.abs(calc.grainPctSum - 100) < 0.1;
+
+  return `
+    <div class="card">
+      <b>⚖️ 누룩 반죽 목표량 설정 (손실률 10% 자동 계산)</b>
+      <div class="mute">완성할 누룩 반죽 무게를 입력하면 손실률 10%를 더해 필요한 재료를 역산합니다.</div>
+      <div class="row no-export" style="margin-top:8px">
+        <div>
+          <label>목표 누룩 반죽량 (g)</label>
+          <input id="nk_target_dough" type="number" value="${b.targetDough || 1000}" onchange="appUpdateNurukTarget()">
+        </div>
+        <div>
+          <label>작업 손실률 (%)</label>
+          <input id="nk_loss_rate" type="number" value="${b.lossRate != null ? b.lossRate : 10}" onchange="appUpdateNurukTarget()">
+        </div>
+        <div style="flex:0 0 auto">
+          <button type="button" class="p" onclick="appUpdateNurukTarget()">적용</button>
+        </div>
+      </div>
+
+      <div style="background:var(--bg);padding:8px 12px;border-radius:8px;margin-top:10px;font-size:13px">
+        <div>🎯 최종 목표 반죽: <b>${f(calc.targetDough, 0)}g</b></div>
+        <div style="color:var(--acc);font-weight:700;margin-top:2px">
+          ➔ 손실률(${calc.lossRate}%) 반영 실제 제조량: <b>${f(calc.reqDough, 1)}g</b> (곡물 + 물)
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <b>📋 누룩 배합 레시피 (% 투입 비율)</b>
+      <div class="mute">곡물들의 합계는 100%가 되어야 하며, 물과 부재료는 곡물 대비 %로 입력합니다.</div>
+      
+      <div style="background:var(--bg);padding:8px 12px;border-radius:8px;margin:10px 0">
+        ${itemsListHtml}
+      </div>
+
+      <div class="calc-box no-export">
+        <div style="font-weight:600;font-size:13px;margin-bottom:6px">➕ 재료 추가하기</div>
+        <div class="row">
+          <div style="flex:1.2">
+            <label>구분</label>
+            <select id="nk_cat">
+              <option value="grain">🌾 곡물 (합계 100%)</option>
+              <option value="water">💧 물 (곡물 대비 %)</option>
+              <option value="extra">🌿 부재료 (외할 %)</option>
+            </select>
           </div>
-          <div>
-            <label>작업 손실률 (%)</label>
-            <input id="nk_loss_rate" type="number" value="${b.lossRate != null ? b.lossRate : 10}" onchange="appUpdateNurukTarget()">
+          <div style="flex:2">
+            <label>재료명</label>
+            <input id="nk_name" placeholder="예: 통밀가루, 생수">
+          </div>
+          <div style="flex:1">
+            <label>투입 비율(%)</label>
+            <input id="nk_pct" type="number" step="0.5" placeholder="%">
           </div>
           <div style="flex:0 0 auto">
-            <button type="button" class="p" onclick="appUpdateNurukTarget()">적용 및 저장</button>
-          </div>
-        </div>
-
-        <div style="background:var(--bg);padding:8px 12px;border-radius:8px;margin-top:10px;font-size:13px">
-          <div>🎯 최종 목표 반죽: <b>${f(calc.targetDough, 0)}g</b></div>
-          <div style="color:var(--acc);font-weight:700;margin-top:2px">
-            ➔ 손실률(${calc.lossRate}%) 반영 실제 제조량: <b>${f(calc.reqDough, 1)}g</b> (곡물 + 물)
+            <button type="button" class="p" onclick="appAddNurukRecipeItem()">추가</button>
           </div>
         </div>
       </div>
 
-      <div class="card">
-        <b>📋 누룩 배합 레시피 (% 투입 비율)</b>
-        <div class="mute">곡물들의 합계는 100%가 되어야 하며, 물과 부재료는 곡물 대비 %로 입력합니다.</div>
+      <div style="font-size:12px;margin-top:4px">
+        곡물 지분 합계: <b class="${is100 ? 'ok' : 'warn'}">${calc.grainPctSum.toFixed(1)}%</b> 
+        ${is100 ? '<span class="ok">✓ 100% 일치</span>' : '<span class="warn">⚠️ 곡물 합계가 100%가 되도록 맞춰주세요!</span>'} · 
+        물 비율: <b>${calc.waterPctSum.toFixed(1)}%</b>
+      </div>
+    </div>
+
+    <div class="card calc-res">
+      <b>🥣 [계산 결과] 지금 계량할 원료 무게</b>
+      <div class="mute" style="margin-bottom:8px">손실률이 포함된 실제 계량치입니다. 저울에 올려 바로 만드세요.</div>
+
+      <div style="margin-bottom:8px">
+        <div style="font-size:12px;color:var(--mute);margin-bottom:2px">🌾 곡물류 (총 ${f(calc.grainTotal, 1)}g)</div>
+        ${grainRows || '<div class="mute" style="font-size:12px">곡물을 추가해주세요.</div>'}
+      </div>
+
+      <div style="margin-bottom:8px;padding-top:6px;border-top:1px dashed var(--line)">
+        <div style="font-size:12px;color:var(--mute);margin-bottom:2px">💧 반죽수 (총 ${f(calc.waterTotal, 1)}g)</div>
+        ${waterRows || '<div class="mute" style="font-size:12px">물을 추가해주세요.</div>'}
+      </div>
+
+      ${calc.calculatedExtras.length ? `
+        <div style="padding-top:6px;border-top:1px dashed var(--line)">
+          <div style="font-size:12px;color:var(--mute);margin-bottom:2px">🌿 부재료 (반죽 무게 외 별도 투입)</div>
+          ${extraRows}
+        </div>
+      ` : ''}
+
+      <div style="background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px;margin-top:10px;font-size:13px;display:flex;justify-content:space-between;font-weight:bold">
+        <span>총 반죽 계량 합계 (곡물 + 물)</span>
+        <span style="color:var(--acc)">${f(calc.grainTotal + calc.waterTotal, 1)} g</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <b>🧱 성형 및 디딤 방법 작성란</b>
+      <textarea id="nk_molding" rows="3" style="margin-top:8px" placeholder="분쇄도(조분/미분 비율), 디딤틀 규격, 디딤 압력, 볏짚 포장 방식 등을 적어두세요">${esc(b.moldingNote || '')}</textarea>
+      <button type="button" class="p no-export" style="width:100%;margin-top:8px" onclick="appSaveMoldingNote()">성형 방법 저장</button>
+    </div>
+  `;
+}
+
+function nurukJournalView(b){
+  const sortedLogs = (b.logs || []).slice().sort((x, y) => y.d.localeCompare(x.d));
+  return `
+    <div class="card">
+      <b>🌡 누룩 품온 & 띄우기 환경 추이</b>
+      <div style="margin-top:6px">${chart(b)}</div>
+    </div>
+
+    <div class="card no-export" id="log-input-card">
+      <b>📝 일일 누룩 관리 기록 / 수정</b>
+      <div class="row">
+        <div><label>측정일</label><input id="l_d" type="date" value="${today()}"></div>
+        <div><label>품온(°C)</label><input id="l_temp" type="number" step="0.1" placeholder="누룩 내부"></div>
+        <div><label>실온(°C)</label><input id="l_room" type="number" step="0.1" placeholder="방 온도"></div>
+        <div><label>실내 습도(%)</label><input id="l_hum" type="number" step="1" placeholder="예: 85"></div>
+      </div>
+
+      <label style="display:flex;gap:6px;align-items:center;margin:8px 0">
+        <input id="l_vent" type="checkbox" style="width:auto"> 🌀 환기 및 뒤집기 (상하 반전) 실시함
+      </label>
+
+      <label>📸 당일 누룩 사진 첨부</label>
+      <input id="l_file" type="file" accept="image/*" onchange="appHandleImgUpload(event)">
+      <input id="l_img_data" type="hidden">
+      <div id="img_preview_box" style="margin-top:4px"></div>
+
+      <label style="margin-top:8px">📝 비고 (균사 색상, 냄새, 포대 관리 등)</label>
+      <textarea id="l_note" rows="2" placeholder="예: 백색 균사 번식, 구수한 향, 젖은 면포 교체"></textarea>
+
+      <button type="button" class="p" style="width:100%;margin-top:10px" onclick="appAddNurukLog()">누룩 일지 저장</button>
+    </div>
+
+    <div class="card">
+      <b>📜 누룩 띄우기 로그 내역</b>
+      ${sortedLogs.length ? sortedLogs.map(l => `
+        <div class="log">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <b>${l.d}</b> <span class="mute">D+${dayN(b.start, l.d)}</span>${l.vent ? '<span class="tag" style="background:var(--c4)">🌀 환기/뒤집음</span>' : ''}
+            </div>
+            <div class="no-export">
+              <button type="button" class="edit-btn" onclick="appEditNurukLog('${l.d}')">수정</button>
+              <button type="button" class="g" style="color:#d9534f" onclick="appDelLog('${l.d}')">삭제</button>
+            </div>
+          </div>
+          <div class="mute" style="margin:4px 0 2px">
+            ${[
+              l.temp !== '' && '품온 ' + l.temp + '°C',
+              l.room !== '' && '실온 ' + l.room + '°C',
+              (l.hum !== '' && l.hum != null) && '습도 ' + l.hum + '%'
+            ].filter(Boolean).join(' · ')}
+          </div>
+          <div>${esc(l.note)}</div>${l.img ? `<img src="${l.img}" class="log-img" alt="누룩 사진" onclick="window.open(this.src)">` : ''}
+        </div>
+      `).join('') : '<div class="mute" style="margin-top:8px">기록된 일지가 없습니다.</div>'}
+    </div>
+  `;
+}
+
+function wineRecipeView(b){
+  if(!b.stages) b.stages = [];
+  const g = tot(b, 'grain'), n = tot(b, 'nuruk'), w = tot(b, 'water');
+  const T = WINE_CATS.reduce((a, c) => a + tot(b, c.k), 0);
+  const tg = b.target || {};
+  const targetNurukPct = tg.nurukRatio != null ? tg.nurukRatio : 10.0;
+  const targetWaterPct = tg.waterRatio != null ? tg.waterRatio : 100.0;
+
+  const rows = WINE_CATS.map(c => {
+    const a = tot(b, c.k);
+    return `<tr>
+      <td><span class="dot" style="background:${c.col}"></span>${c.n}</td>
+      <td>${f(a, 0)}g</td>
+      <td>${g ? (a / g).toFixed(2) : '-'}</td>
+      <td>${g ? (a / g * 100).toFixed(1) + '%' : '-'}</td>
+      <td>${T ? f(a / T * 100, 1) + '%' : '-'}</td>
+    </tr>`;
+  }).join('');
+
+  const bar = T ? `<div class="bar">${WINE_CATS.map(c => `<div style="width:${tot(b, c.k) / T * 100}\%;background:${c.col}"></div>`).join('')}</div>` : '';
+
+  const stagesHtml = b.stages.map((stg, sIdx) => {
+    const itemsHtml = (stg.items && stg.items.length) ? stg.items.map((item, iIdx) => {
+      const catInfo = WINE_CATS.find(c => c.k === item.cat) || WINE_CATS[0];
+      return `
+        <div class="item">
+          <span><span class="dot" style="background:${catInfo.col}"></span>[${catInfo.n}] <b>${esc(item.name)}</b></span>
+          <span>${item.amt}g <button type="button" class="g no-export" onclick="appDelStageItem(${sIdx}, ${iIdx})">✕</button></span>
+        </div>
+      `;
+    }).join('') : '<div class="mute" style="font-size:12px;padding:4px 0">투입된 원료가 없습니다.</div>';
+
+    return `
+      <div class="stage-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <h3 style="margin:0;font-size:15px;color:var(--acc)">🍶 ${esc(stg.name)}</h3>
+          <button type="button" class="g no-export" style="color:#d9534f" onclick="appDelStage(${sIdx})">단계 삭제</button>
+        </div>
+
+        <div class="row" style="margin-bottom:8px">
+          <div style="flex:1">
+            <label>📅 ${esc(stg.name)} 담금 일자</label>
+            <input type="date" value="${stg.date || today()}" onchange="appSetStageDate(${sIdx}, this.value)">
+          </div>
+          <div style="flex:1;font-size:12px;color:var(--mute);padding-bottom:10px">
+            시작 대비: <b>D+${dayN(b.start, stg.date || b.start)}</b>
+          </div>
+        </div>
         
-        <div style="background:var(--bg);padding:8px 12px;border-radius:8px;margin:10px 0">
-          ${itemsListHtml}
-        </div>
+        <div style="margin-bottom:10px">${itemsHtml}</div>
 
-        <div class="calc-box no-export">
-          <div style="font-weight:600;font-size:13px;margin-bottom:6px">➕ 재료 추가하기</div>
-          <div class="row">
-            <div style="flex:1.2">
-              <label>구분</label>
-              <select id="nk_cat">
-                <option value="grain">🌾 곡물 (합계 100%)</option>
-                <option value="water">💧 물 (곡물 대비 %)</option>
-                <option value="extra">🌿 부재료 (외할 %)</option>
-              </select>
-            </div>
-            <div style="flex:2">
-              <label>재료명</label>
-              <input id="nk_name" placeholder="예: 통밀가루, 생수">
-            </div>
-            <div style="flex:1">
-              <label>투입 비율(%)</label>
-              <input id="nk_pct" type="number" step="0.5" placeholder="%">
-            </div>
-            <div style="flex:0 0 auto">
-              <button type="button" class="p" onclick="appAddNurukRecipeItem()">추가</button>
-            </div>
+        <div class="row no-export" style="background:var(--bg);padding:8px;border-radius:8px">
+          <div style="flex:1">
+            <label>분류</label>
+            <select id="stg_cat_${sIdx}">
+              ${WINE_CATS.map(c => `<option value="${c.k}">${c.ic}${c.n}</option>`).join('')}
+            </select>
+          </div>
+          <div style="flex:2">
+            <label>원료명</label>
+            <input id="stg_name_${sIdx}" placeholder="예: 멥쌀 범벅">
+          </div>
+          <div style="flex:1">
+            <label>양(g)</label>
+            <input id="stg_amt_${sIdx}" type="number" placeholder="g">
+          </div>
+          <div style="flex:0 0 auto">
+            <button type="button" class="p" onclick="appAddStageItem(${sIdx})">추가</button>
           </div>
         </div>
 
-        <div style="font-size:12px;margin-top:4px">
-          곡물 지분 합계: <b class="${is100 ? 'ok' : 'warn'}">${calc.grainPctSum.toFixed(1)}%</b> 
-          ${is100 ? '<span class="ok">✓ 100% 일치</span>' : '<span class="warn">⚠️ 곡물 합계가 100%가 되도록 맞춰주세요!</span>'} · 
-          물 비율: <b>${calc.waterPctSum.toFixed(1)}%</b>
-        </div>
-      </div>
-
-      <div class="card calc-res">
-        <b>🥣 [계산 결과] 지금 계량할 원료 무게</b>
-        <div class="mute" style="margin-bottom:8px">손실률이 포함된 실제 계량치입니다. 저울에 올려 바로 만드세요.</div>
-
-        <div style="margin-bottom:8px">
-          <div style="font-size:12px;color:var(--mute);margin-bottom:2px">🌾 곡물류 (총 ${f(calc.grainTotal, 1)}g)</div>
-          ${grainRows || '<div class="mute" style="font-size:12px">곡물을 추가해주세요.</div>'}
-        </div>
-
-        <div style="margin-bottom:8px;padding-top:6px;border-top:1px dashed var(--line)">
-          <div style="font-size:12px;color:var(--mute);margin-bottom:2px">💧 반죽수 (총 ${f(calc.waterTotal, 1)}g)</div>
-          ${waterRows || '<div class="mute" style="font-size:12px">물을 추가해주세요.</div>'}
-        </div>
-
-        ${calc.calculatedExtras.length ? `
-          <div style="padding-top:6px;border-top:1px dashed var(--line)">
-            <div style="font-size:12px;color:var(--mute);margin-bottom:2px">🌿 부재료 (반죽 무게 외 별도 투입)</div>
-            ${extraRows}
-          </div>
-        ` : ''}
-
-        <div style="background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px;margin-top:10px;font-size:13px;display:flex;justify-content:space-between;font-weight:bold">
-          <span>총 반죽 계량 합계 (곡물 + 물)</span>
-          <span style="color:var(--acc)">${f(calc.grainTotal + calc.waterTotal, 1)} g</span>
-        </div>
-      </div>
-
-      <div class="card">
-        <b>🧱 성형 및 디딤 방법 작성란</b>
-        <textarea id="nk_molding" rows="3" style="margin-top:8px" placeholder="분쇄도(조분/미분 비율), 디딤틀 규격, 디딤 압력, 볏짚 포장 방식 등을 적어두세요">${esc(b.moldingNote || '')}</textarea>
-        <button type="button" class="p no-export" style="width:100%;margin-top:8px" onclick="appSaveMoldingNote()">성형 방법 저장</button>
+        <label style="margin-top:10px">📝 ${esc(stg.name)} 비고 (전처리, 찌기, 식힘 등)</label>
+        <textarea id="stg_note_${sIdx}" rows="2" placeholder="작업 메모를 남겨두세요">${esc(stg.note || '')}</textarea>
+        <button type="button" class="no-export" style="width:100%;margin-top:6px;font-size:12px" onclick="appSaveStageNote(${sIdx})">비고 저장</button>
       </div>
     `;
-  }
+  }).join('');
 
-  function nurukJournalView(b){
-    const sortedLogs = (b.logs || []).slice().sort((x, y) => y.d.localeCompare(x.d));
-    return `
-      <div class="card">
-        <b>🌡 누룩 품온 & 띄우기 환경 추이</b>
-        <div style="margin-top:6px">${chart(b)}</div>
+  const targetNurukAmt = g * (targetNurukPct / 100);
+  const targetWaterAmt = g * (targetWaterPct / 100);
+
+  return `
+    <div class="card">
+      <b>📊 전체 누적 배합 비율 (합계)</b>
+      ${bar}
+      <table>
+        <tr><th>항목</th><th>총 투입량</th><th>곡물 1 대비</th><th>곡물 대비 %</th><th>전체 중 비중</th></tr>
+        ${rows}
+        <tr class="tot"><td>총합</td><td>${f(T, 0)}g</td><td>${g ? (T / g).toFixed(2) : '-'}</td><td>-</td><td>100%</td></tr>
+      </table>
+      <div class="big">${brief(b)}</div>
+      <div class="mute">
+        누룩 비율: <b>${g ? (n / g * 100).toFixed(1) : '-'}%</b> · 
+        물 비율(가수율): <b>${g ? (w / g * 100).toFixed(1) : '-'}%</b>
       </div>
+    </div>
 
-      <div class="card no-export" id="log-input-card">
-        <b>📝 일일 누룩 관리 기록 / 수정</b>
-        <div class="row">
-          <div><label>측정일</label><input id="l_d" type="date" value="${today()}"></div>
-          <div><label>품온(°C)</label><input id="l_temp" type="number" step="0.1" placeholder="누룩 내부"></div>
-          <div><label>실온(°C)</label><input id="l_room" type="number" step="0.1" placeholder="방 온도"></div>
-          <div><label>실내 습도(%)</label><input id="l_hum" type="number" step="1" placeholder="예: 85"></div>
+    <div class="card">
+      <b>🎯 목표 배합비 점검 (곡물 1 기준)</b>
+      <div class="row no-export" style="margin-top:8px">
+        <div>
+          <label>목표 누룩 비율 (곡물 대비 %)</label>
+          <input id="t_nr" type="number" step="0.5" value="${targetNurukPct}">
         </div>
-
-        <label style="display:flex;gap:6px;align-items:center;margin:8px 0">
-          <input id="l_vent" type="checkbox" style="width:auto"> 🌀 환기 및 뒤집기 (상하 반전) 실시함
-        </label>
-
-        <label>📸 당일 누룩 사진 첨부</label>
-        <input id="l_file" type="file" accept="image/*" onchange="appHandleImgUpload(event)">
-        <input id="l_img_data" type="hidden">
-        <div id="img_preview_box" style="margin-top:4px"></div>
-
-        <label style="margin-top:8px">📝 비고 (균사 색상, 냄새, 포대 관리 등)</label>
-        <textarea id="l_note" rows="2" placeholder="예: 백색 균사 번식, 구수한 향, 젖은 면포 교체"></textarea>
-
-        <button type="button" class="p" style="width:100%;margin-top:10px" onclick="appAddNurukLog()">누룩 일지 저장</button>
+        <div>
+          <label>목표 물 비율 (곡물 대비 %)</label>
+          <input id="t_wr" type="number" step="0.5" value="${targetWaterPct}">
+        </div>
+        <div style="flex:0 0 auto">
+          <button type="button" class="p" onclick="appSaveTarget()">목표 저장</button>
+        </div>
       </div>
 
-      <div class="card">
-        <b>📜 누룩 띄우기 로그 내역</b>
-        ${sortedLogs.length ? sortedLogs.map(l => `
+      <table style="margin-top:10px">
+        <tr><th>원료</th><th>목표 필요량</th><th>현재 누적량</th><th>상태</th></tr>
+        <tr><td>누룩</td><td>${f(targetNurukAmt, 0)}g</td><td>${f(n, 0)}g</td><td>${diff(n, targetNurukAmt, 'g')}</td></tr>
+        <tr><td>물 (가수량)</td><td>${f(targetWaterAmt, 0)}g</td><td>${f(w, 0)}g</td><td>${diff(w, targetWaterAmt, 'g')}</td></tr>
+      </table>
+    </div>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin:16px 0 8px">
+      <h2 style="margin:0">🪜 담금 단계 레이어</h2>
+      <button type="button" class="p no-export" onclick="appAddStage()">+ 덧술 단계 추가</button>
+    </div>
+
+    ${stagesHtml || '<div class="card mute">단계를 추가해 주세요.</div>'}
+  `;
+}
+
+function wineJournalView(b){
+  const sortedLogs = (b.logs || []).slice().sort((x, y) => y.d.localeCompare(x.d));
+  return `
+    <div class="card">
+      <b>🌡 발효 모니터링 추이</b>
+      <div style="margin-top:6px">${chart(b)}</div>
+    </div>
+
+    <div class="card no-export" id="log-input-card">
+      <b>📝 발효 데이터 기록 / 수정</b>
+      <div class="row">
+        <div><label>측정일</label><input id="l_d" type="date" value="${today()}"></div>
+        <div><label>품온(°C)</label><input id="l_temp" type="number" step="0.1"></div>
+        <div><label>실온(°C)</label><input id="l_room" type="number" step="0.1"></div>
+        <div><label>당도(°Bx)</label><input id="l_brix" type="number" step="0.1"></div>
+        <div><label>pH</label><input id="l_ph" type="number" step="0.1"></div>
+      </div>
+      <label>발효 현상 메모</label>
+      <textarea id="l_note" rows="2" placeholder="예: 향긋한 과실향, 탄산 기포 왕성"></textarea>
+      <label style="display:flex;gap:6px;align-items:center;margin-top:6px">
+        <input id="l_stir" type="checkbox" style="width:auto"> 교반(저어주기) 완료
+      </label>
+      <button type="button" class="p" style="width:100%;margin-top:10px" onclick="appAddWineLog()">기록 저장</button>
+    </div>
+
+    <div class="card">
+      <b>📜 일자별 로그 & 덧술 진행 현황</b>
+      ${sortedLogs.length ? sortedLogs.map(l => {
+        const ctx = getStageContext(b, l.d);
+        const badgeHtml = ctx ? `<span class="tag ${ctx.isEventDay ? 'stage' : 'd'}">${esc(ctx.text)}</span>` : '';
+        return `
           <div class="log">
             <div style="display:flex;justify-content:space-between;align-items:center">
               <div>
-                <b>${l.d}</b> <span class="mute">D+${dayN(b.start, l.d)}</span>${l.vent ? '<span class="tag" style="background:var(--c4)">🌀 환기/뒤집음</span>' : ''}
+                <b>${l.d}</b> <span class="mute">D+${dayN(b.start, l.d)}</span>${badgeHtml}
               </div>
               <div class="no-export">
-                <button type="button" class="edit-btn" onclick="appEditNurukLog('${l.d}')">수정</button>
+                <button type="button" class="edit-btn" onclick="appEditWineLog('${l.d}')">수정</button>
                 <button type="button" class="g" style="color:#d9534f" onclick="appDelLog('${l.d}')">삭제</button>
               </div>
             </div>
@@ -597,708 +797,499 @@
               ${[
                 l.temp !== '' && '품온 ' + l.temp + '°C',
                 l.room !== '' && '실온 ' + l.room + '°C',
-                (l.hum !== '' && l.hum != null) && '습도 ' + l.hum + '%'
+                (l.brix !== '' && l.brix != null) && '당도 ' + l.brix + '°Bx',
+                (l.ph !== '' && l.ph != null) && 'pH ' + l.ph,
+                l.stir && '🥄 교반'
               ].filter(Boolean).join(' · ')}
             </div>
-            <div>${esc(l.note)}</div>${l.img ? `<img src="${l.img}" class="log-img" alt="누룩 사진" onclick="window.open(this.src)">` : ''}
-          </div>
-        `).join('') : '<div class="mute" style="margin-top:8px">기록된 일지가 없습니다.</div>'}
-      </div>
-    `;
-  }
-
-  function wineRecipeView(b){
-    if(!b.stages) b.stages = [];
-    const g = tot(b, 'grain'), n = tot(b, 'nuruk'), w = tot(b, 'water'), T = all(b);
-    const tg = b.target || {};
-    const targetNurukPct = tg.nurukRatio != null ? tg.nurukRatio : 10.0;
-    const targetWaterPct = tg.waterRatio != null ? tg.waterRatio : 100.0;
-
-    const rows = WINE_CATS.map(c => {
-      const a = tot(b, c.k);
-      return `<tr>
-        <td><span class="dot" style="background:${c.col}"></span>${c.n}</td>
-        <td>${f(a, 0)}g</td>
-        <td>${g ? (a / g).toFixed(2) : '-'}</td>
-        <td>${g ? (a / g * 100).toFixed(1) + '%' : '-'}</td>
-        <td>${T ? f(a / T * 100, 1) + '%' : '-'}</td>
-      </tr>`;
-    }).join('');
-
-    const bar = T ? `<div class="bar">${WINE_CATS.map(c => `<div style="width:${tot(b, c.k) / T * 100}\%;background:${c.col}"></div>`).join('')}</div>` : '';
-
-    const stagesHtml = b.stages.map((stg, sIdx) => {
-      const itemsHtml = (stg.items && stg.items.length) ? stg.items.map((item, iIdx) => {
-        const catInfo = WINE_CATS.find(c => c.k === item.cat) || WINE_CATS[0];
-        return `
-          <div class="item">
-            <span><span class="dot" style="background:${catInfo.col}"></span>[${catInfo.n}] <b>${esc(item.name)}</b></span>
-            <span>${item.amt}g <button type="button" class="g no-export" onclick="appDelStageItem(${sIdx}, ${iIdx})">✕</button></span>
+            <div>${esc(l.note)}</div>
           </div>
         `;
-      }).join('') : '<div class="mute" style="font-size:12px;padding:4px 0">투입된 원료가 없습니다.</div>';
-
-      return `
-        <div class="stage-card">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-            <h3 style="margin:0;font-size:15px;color:var(--acc)">🍶 ${esc(stg.name)}</h3>
-            <button type="button" class="g no-export" style="color:#d9534f" onclick="appDelStage(${sIdx})">단계 삭제</button>
-          </div>
-
-          <div class="row" style="margin-bottom:8px">
-            <div style="flex:1">
-              <label>📅 ${esc(stg.name)} 담금 일자</label>
-              <input type="date" value="${stg.date || today()}" onchange="appSetStageDate(${sIdx}, this.value)">
-            </div>
-            <div style="flex:1;font-size:12px;color:var(--mute);padding-bottom:10px">
-              시작 대비: <b>D+${dayN(b.start, stg.date || b.start)}</b>
-            </div>
-          </div>
-          
-          <div style="margin-bottom:10px">${itemsHtml}</div>
-
-          <div class="row no-export" style="background:var(--bg);padding:8px;border-radius:8px">
-            <div style="flex:1">
-              <label>분류</label>
-              <select id="stg_cat_${sIdx}">
-                ${WINE_CATS.map(c => `<option value="${c.k}">${c.ic}${c.n}</option>`).join('')}
-              </select>
-            </div>
-            <div style="flex:2">
-              <label>원료명</label>
-              <input id="stg_name_${sIdx}" placeholder="예: 멥쌀 범벅">
-            </div>
-            <div style="flex:1">
-              <label>양(g)</label>
-              <input id="stg_amt_${sIdx}" type="number" placeholder="g">
-            </div>
-            <div style="flex:0 0 auto">
-              <button type="button" class="p" onclick="appAddStageItem(${sIdx})">추가</button>
-            </div>
-          </div>
-
-          <label style="margin-top:10px">📝 ${esc(stg.name)} 비고 (전처리, 찌기, 식힘 등)</label>
-          <textarea id="stg_note_${sIdx}" rows="2" placeholder="작업 메모를 남겨두세요">${esc(stg.note || '')}</textarea>
-          <button type="button" class="no-export" style="width:100%;margin-top:6px;font-size:12px" onclick="appSaveStageNote(${sIdx})">비고 저장</button>
-        </div>
-      `;
-    }).join('');
-
-    const targetNurukAmt = g * (targetNurukPct / 100);
-    const targetWaterAmt = g * (targetWaterPct / 100);
-
-    return `
-      <div class="card">
-        <b>📊 전체 누적 배합 비율 (합계)</b>
-        ${bar}
-        <table>
-          <tr><th>항목</th><th>총 투입량</th><th>곡물 1 대비</th><th>곡물 대비 %</th><th>전체 중 비중</th></tr>
-          ${rows}
-          <tr class="tot"><td>총합</td><td>${f(T, 0)}g</td><td>${g ? (T / g).toFixed(2) : '-'}</td><td>-</td><td>100%</td></tr>
-        </table>
-        <div class="big">${brief(b)}</div>
-        <div class="mute">
-          누룩 비율: <b>${g ? (n / g * 100).toFixed(1) : '-'}%</b> (곡물 대비) · 
-          물 비율(가수율): <b>${g ? (w / g * 100).toFixed(1) : '-'}%</b> (곡물 대비)
-        </div>
-      </div>
-
-      <div class="card">
-        <b>🎯 목표 배합비 점검 (곡물 1 기준)</b>
-        <div class="mute">현재 총 곡물량 (<b>${f(g, 0)}g</b>)을 1(100%)로 두고 목표량을 계산합니다.</div>
-        
-        <div class="row no-export" style="margin-top:8px">
-          <div>
-            <label>목표 누룩 비율 (곡물 대비 %)</label>
-            <input id="t_nr" type="number" step="0.5" value="${targetNurukPct}">
-          </div>
-          <div>
-            <label>목표 물 비율 / 가수율 (곡물 대비 %)</label>
-            <input id="t_wr" type="number" step="0.5" value="${targetWaterPct}">
-          </div>
-          <div style="flex:0 0 auto">
-            <button type="button" class="p" onclick="appSaveTarget()">목표 저장</button>
-          </div>
-        </div>
-
-        <table style="margin-top:10px">
-          <tr><th>원료</th><th>목표 기준</th><th>목표 필요량</th><th>현재 누적량</th><th>상태 (조정 필요량)</th></tr>
-          <tr>
-            <td>누룩</td>
-            <td>${targetNurukPct}%</td>
-            <td>${f(targetNurukAmt, 0)}g</td>
-            <td>${f(n, 0)}g</td>
-            <td>${diff(n, targetNurukAmt, 'g')}</td>
-          </tr>
-          <tr>
-            <td>물 (가수량)</td>
-            <td>${targetWaterPct}%</td>
-            <td>${f(targetWaterAmt, 0)}g</td>
-            <td>${f(w, 0)}g</td>
-            <td>${diff(w, targetWaterAmt, 'g')}</td>
-          </tr>
-        </table>
-      </div>
-
-      <div style="display:flex;justify-content:space-between;align-items:center;margin:16px 0 8px">
-        <h2 style="margin:0">🪜 담금 단계 레이어 (단양주/이양주/삼양주)</h2>
-        <button type="button" class="p no-export" onclick="appAddStage()">+ 덧술 단계 추가</button>
-      </div>
-
-      ${stagesHtml || '<div class="card mute">단계를 추가해 주세요. (밑술부터 시작)</div>'}
-    `;
-  }
-
-  function wineJournalView(b){
-    const sortedLogs = (b.logs || []).slice().sort((x, y) => y.d.localeCompare(x.d));
-    return `
-      <div class="card">
-        <b>🌡 발효 모니터링 추이</b>
-        <div style="margin-top:6px">${chart(b)}</div>
-      </div>
-
-      <div class="card no-export" id="log-input-card">
-        <b>📝 발효 데이터 기록 / 수정</b>
-        <div class="row">
-          <div><label>측정일</label><input id="l_d" type="date" value="${today()}"></div>
-          <div><label>품온(°C)</label><input id="l_temp" type="number" step="0.1"></div>
-          <div><label>실온(°C)</label><input id="l_room" type="number" step="0.1"></div>
-          <div><label>당도(°Bx)</label><input id="l_brix" type="number" step="0.1"></div>
-          <div><label>pH</label><input id="l_ph" type="number" step="0.1"></div>
-        </div>
-        <label>발효 현상 메모 (기포, 향미, 산미 등)</label>
-        <textarea id="l_note" rows="2" placeholder="예: 향긋한 과실향 발생, 탄산 기포 왕성"></textarea>
-        <label style="display:flex;gap:6px;align-items:center;margin-top:6px">
-          <input id="l_stir" type="checkbox" style="width:auto"> 교반(저어주기) / 뒤집기 완료
-        </label>
-        <button type="button" class="p" style="width:100%;margin-top:10px" onclick="appAddWineLog()">기록 저장</button>
-      </div>
-
-      <div class="card">
-        <b>📜 일자별 로그 & 덧술 진행 현황</b>
-        ${sortedLogs.length ? sortedLogs.map(l => {
-          const ctx = getStageContext(b, l.d);
-          const badgeHtml = ctx ? `<span class="tag ${ctx.isEventDay ? 'stage' : 'd'}">${esc(ctx.text)}</span>` : '';
-          return `
-            <div class="log">
-              <div style="display:flex;justify-content:space-between;align-items:center">
-                <div>
-                  <b>${l.d}</b> <span class="mute">D+${dayN(b.start, l.d)}</span>${badgeHtml}
-                </div>
-                <div class="no-export">
-                  <button type="button" class="edit-btn" onclick="appEditWineLog('${l.d}')">수정</button>
-                  <button type="button" class="g" style="color:#d9534f" onclick="appDelLog('${l.d}')">삭제</button>
-                </div>
-              </div>
-              <div class="mute" style="margin:4px 0 2px">
-                ${[
-                  l.temp !== '' && '품온 ' + l.temp + '°C',
-                  l.room !== '' && '실온 ' + l.room + '°C',
-                  (l.brix !== '' && l.brix != null) && '당도 ' + l.brix + '°Bx',
-                  (l.ph !== '' && l.ph != null) && 'pH ' + l.ph,
-                  l.stir && '🥄 교반'
-                ].filter(Boolean).join(' · ')}
-              </div>
-              <div>${esc(l.note)}</div>
-            </div>
-          `;
-        }).join('') : '<div class="mute" style="margin-top:8px">기록된 일지가 없습니다.</div>'}
-      </div>
-    `;
-  }
-
-  function render(){
-    const a = $('#app');
-    if(!a) return;
-
-    if(view.page === 'list'){
-      const batchCards = db.slice().sort((x, y) => y.id - x.id).map(b => {
-        const last = (b.logs && b.logs.length) ? b.logs[b.logs.length - 1] : null;
-        let badgeType = b.type;
-        if(b.type !== '누룩'){
-          const sc = b.stages ? b.stages.length : 0;
-          badgeType = sc === 1 ? '단양주' : sc === 2 ? '이양주' : sc === 3 ? '삼양주' : `${sc}양주`;
-        }
-        return `
-          <div class="card clickable" onclick="appGo('detail', ${b.id})">
-            <div>
-              <span class="tag" style="background:${b.type === '누룩' ? 'var(--c2)' : 'var(--acc)'}">${b.type}</span>
-              <span class="tag" style="background:var(--c1)">${badgeType}</span>
-              <span class="tag d">${esc(b.status)}</span>
-              <span class="mute">D+${dayN(b.start)}</span>
-            </div>
-            <h3 style="margin:6px 0 2px">${esc(b.name)}</h3>
-            <div class="mute">${brief(b)}</div>
-            <div class="mute" style="margin-top:4px">
-              ${last ? `최근: ${last.d} · 품온 ${last.temp}°C${last.hum ? `· 습도 ${last.hum}%` : (last.brix !== '' ? `· ${last.brix}°Bx` : '')}` : '측정 데이터 없음'}
-            </div>
-          </div>
-        `;
-      }).join('');
-
-      a.innerHTML = `
-        <h1>🍶 미미록 (味美錄)</h1>
-        <div class="sub">전통주 주방문 & 누룩 발효 기록장</div>
-        <button type="button" class="p" style="width:100%;margin:12px 0" onclick="appGo('new')">+ 새 배치 등록</button>
-        ${batchCards}
-      `;
-    } 
-    else if(view.page === 'new'){
-      a.innerHTML = `
-        <button type="button" class="g" onclick="appGo('list')">← 목록으로</button>
-        <h1>새 배치 만들기</h1>
-        <div class="card">
-          <label>종류 선택</label>
-          <select id="f_type">
-            <option value="막걸리">전통주 (막걸리/약주/탁주 덧술 배합비)</option>
-            <option value="누룩">전통 누룩 (반죽 목표량 역산 계산기 / 온·습도 일지)</option>
-          </select>
-          <label>배치명</label>
-          <input id="f_name" placeholder="예: 찰흑미 삼양주 또는 통밀 향온곡 3호">
-          <label>시작일자</label>
-          <input id="f_start" type="date" value="${today()}">
-          <button type="button" class="p" style="width:100%;margin-top:14px" onclick="appAddBatch()">생성 및 시작</button>
-        </div>
-      `;
-    } 
-    else {
-      const b = cur();
-      if(!b) return appGo('list');
-      const isNuruk = b.type === '누룩';
-
-      a.innerHTML = `
-        <div id="export-top-bar" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-          <button type="button" class="g" onclick="appGo('list')">← 목록</button>
-          <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
-            <button type="button" class="save-btn" onclick="appExportImage()">🖼️ 이미지로 저장</button>
-            <button type="button" class="save-btn" onclick="appExportPDF()">📄 PDF로 저장</button>
-          </div>
-        </div>
-
-        <div id="capture-area">
-          <div style="margin-top:4px">
-            <span class="tag" style="background:${isNuruk ? 'var(--c2)' : 'var(--acc)'}">${b.type}</span>
-            <span class="mute">시작일 ${b.start} (D+${dayN(b.start)})</span>
-          </div>
-          <h1 style="margin:4px 0">${esc(b.name)}</h1>
-          <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
-            <label style="margin:0;font-size:13px">진행 상태:</label>
-            <select class="no-export" onchange="appSetStatus(this.value)" style="width:auto;padding:4px 8px">
-              ${['발효중','숙성중','건조중','완료','실패'].map(s => `<option ${s === b.status ? 'selected' : ''}>${s}</option>`).join('')}
-            </select>
-          </div>
-
-          <div class="tabs no-export">
-            <button type="button" class="${view.tab === 'recipe' ? 'on' : ''}" onclick="appTab('recipe')">${isNuruk ? '🧮 누룩 역산 계산기' : '📖 배합비 & 덧술'}</button>
-            <button type="button" class="${view.tab === 'journal' ? 'on' : ''}" onclick="appTab('journal')">${isNuruk ? '🌡 온·습도·환기 일지' : '📝 발효 일지'}</button>
-          </div>
-
-          ${view.tab === 'recipe' 
-            ? (isNuruk ? nurukRecipeView(b) : wineRecipeView(b)) 
-            : (isNuruk ? nurukJournalView(b) : wineJournalView(b))}
-        </div>
-        
-        <div class="no-export" style="text-align:right;margin-top:10px">
-          <button type="button" class="g" style="color:#d9534f" onclick="appDelBatch()">이 배치 영구 삭제</button>
-        </div>
-      `;
-    }
-  }
-
-  /* 전역 이벤트 바인딩 */
-  window.appGo = (page, id) => {
-    view.page = page;
-    view.id = id || null;
-    view.tab = 'recipe';
-    view.chartFilter = 'all';
-    render();
-  };
-
-  window.appTab = t => {
-    view.tab = t;
-    render();
-  };
-
-  window.appSetChartFilter = filterKey => {
-    view.chartFilter = filterKey;
-    render();
-  };
-
-  window.appAddBatch = () => {
-    const name = v('f_name').trim();
-    if(!name) return alert('배치명을 입력해 주세요.');
-    const newId = Date.now();
-    const type = v('f_type');
-    const startDate = v('f_start') || today();
-
-    if(type === '누룩'){
-      db.push({
-        id: newId,
-        type: '누룩',
-        name: name,
-        start: startDate,
-        status: '발효중',
-        targetDough: 1000,
-        lossRate: 10,
-        moldingNote: '',
-        recipeItems: [
-          { cat: 'grain', name: '통밀가루', pct: 100 },
-          { cat: 'water', name: '반죽 생수', pct: 25 }
-        ],
-        logs: []
-      });
-    } else {
-      db.push({
-        id: newId,
-        type: type,
-        name: name,
-        start: startDate,
-        status: '발효중',
-        target: { nurukRatio: 10.0, waterRatio: 100.0 },
-        stages: [{ name: '밑술 (1단계)', date: startDate, items: [], note: '' }],
-        logs: []
-      });
-    }
-    save();
-    window.appGo('detail', newId);
-  };
-
-  window.appUpdateNurukTarget = () => {
-    const b = cur();
-    b.targetDough = +v('nk_target_dough') || 1000;
-    b.lossRate = v('nk_loss_rate') !== '' ? +v('nk_loss_rate') : 10;
-    save();
-    render();
-  };
-
-  window.appAddNurukRecipeItem = () => {
-    const cat = v('nk_cat');
-    const name = v('nk_name').trim();
-    const pct = +v('nk_pct');
-    if(!name || isNaN(pct) || pct <= 0) return alert('재료 이름과 투입 비율(%)을 올바르게 입력해 주세요.');
-
-    const b = cur();
-    if(!b.recipeItems) b.recipeItems = [];
-    b.recipeItems.push({ cat, name, pct });
-    save();
-    render();
-  };
-
-  window.appDelNurukItem = idx => {
-    cur().recipeItems.splice(idx, 1);
-    save();
-    render();
-  };
-
-  window.appSaveMoldingNote = () => {
-    cur().moldingNote = v('nk_molding');
-    save();
-    alert('성형 및 디딤 메모가 저장되었습니다.');
-  };
-
-  window.appHandleImgUpload = event => {
-    const file = event.target.files[0];
-    if(!file) return;
-
-    const reader = new FileReader();
-    reader.onload = e => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const maxW = 800;
-        const scale = img.width > maxW ? maxW / img.width : 1;
-        canvas.width = img.width * scale;
-        canvas.height = img.height * scale;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
-        $('#l_img_data').value = dataUrl;
-        $('#img_preview_box').innerHTML = `<img src="${dataUrl}" class="log-img">`;
-      };
-      img.src = e.target.result;
-    };
-    reader.readAsDataURL(file);
-  };
-
-  window.appAddNurukLog = () => {
-    const b = cur();
-    const dVal = v('l_d');
-    if(!dVal) return alert('측정일을 입력해 주세요.');
-
-    b.logs = (b.logs || []).filter(l => l.d !== dVal);
-    b.logs.push({
-      d: dVal,
-      temp: v('l_temp'),
-      room: v('l_room'),
-      hum: v('l_hum'),
-      vent: $('#l_vent') ? $('#l_vent').checked : false,
-      img: v('l_img_data') || '',
-      note: v('l_note')
-    });
-    b.logs.sort((x, y) => x.d.localeCompare(y.d));
-    save();
-    render();
-  };
-
-  window.appEditNurukLog = d => {
-    const b = cur();
-    const targetLog = (b.logs || []).find(l => l.d === d);
-    if(!targetLog) return;
-
-    if($('#l_d')) $('#l_d').value = targetLog.d;
-    if($('#l_temp')) $('#l_temp').value = targetLog.temp;
-    if($('#l_room')) $('#l_room').value = targetLog.room;
-    if($('#l_hum')) $('#l_hum').value = targetLog.hum || '';
-    if($('#l_vent')) $('#l_vent').checked = !!targetLog.vent;
-    if($('#l_note')) $('#l_note').value = targetLog.note || '';
-    if($('#l_img_data')) $('#l_img_data').value = targetLog.img || '';
-    if($('#img_preview_box')){
-      $('#img_preview_box').innerHTML = targetLog.img ? `<img src="${targetLog.img}" class="log-img">` : '';
-    }
-
-    const inputCard = $('#log-input-card');
-    if(inputCard) inputCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  };
-
-  window.appSaveTarget = () => {
-    const b = cur();
-    b.target = { nurukRatio: +v('t_nr') || 0, waterRatio: +v('t_wr') || 0 };
-    save();
-    alert('목표 배합 비율이 저장되었습니다.');
-    render();
-  };
-
-  window.appAddStage = () => {
-    const b = cur();
-    if(!b.stages) b.stages = [];
-    const count = b.stages.length;
-    const stageTitle = count === 0 ? '밑술 (1단계)' : `${count}차 덧술 (${count + 1}단계)`;
-    b.stages.push({ name: stageTitle, date: today(), items: [], note: '' });
-    save();
-    render();
-  };
-
-  window.appSetStageDate = (sIdx, newDate) => {
-    const b = cur();
-    b.stages[sIdx].date = newDate;
-    if(sIdx === 0) b.start = newDate;
-    save();
-    render();
-  };
-
-  window.appDelStage = sIdx => {
-    if(confirm('단계를 삭제하시겠습니까?')){
-      cur().stages.splice(sIdx, 1);
-      save();
-      render();
-    }
-  };
-
-  window.appAddStageItem = sIdx => {
-    const cat = v('stg_cat_' + sIdx);
-    const name = v('stg_name_' + sIdx).trim();
-    const amt = +v('stg_amt_' + sIdx);
-    if(!name || !amt) return alert('원료 이름과 무게(g)를 입력해 주세요.');
-    cur().stages[sIdx].items.push(it(cat, name, amt));
-    save();
-    render();
-  };
-
-  window.appDelStageItem = (sIdx, iIdx) => {
-    cur().stages[sIdx].items.splice(iIdx, 1);
-    save();
-    render();
-  };
-
-  window.appSaveStageNote = sIdx => {
-    cur().stages[sIdx].note = v('stg_note_' + sIdx);
-    save();
-    alert('해당 단계의 비고가 저장되었습니다.');
-  };
-
-  window.appAddWineLog = () => {
-    const b = cur();
-    const dVal = v('l_d');
-    if(!dVal) return alert('날짜를 입력해 주세요.');
-    
-    b.logs = (b.logs || []).filter(l => l.d !== dVal);
-    b.logs.push({
-      d: dVal,
-      temp: v('l_temp'),
-      room: v('l_room'),
-      brix: v('l_brix'),
-      ph: v('l_ph'),
-      stir: $('#l_stir') ? $('#l_stir').checked : false,
-      note: v('l_note')
-    });
-    b.logs.sort((x, y) => x.d.localeCompare(y.d));
-    save();
-    render();
-  };
-
-  window.appEditWineLog = d => {
-    const b = cur();
-    const targetLog = (b.logs || []).find(l => l.d === d);
-    if(!targetLog) return;
-
-    if($('#l_d')) $('#l_d').value = targetLog.d;
-    if($('#l_temp')) $('#l_temp').value = targetLog.temp;
-    if($('#l_room')) $('#l_room').value = targetLog.room;
-    if($('#l_brix')) $('#l_brix').value = targetLog.brix;
-    if($('#l_ph')) $('#l_ph').value = targetLog.ph;
-    if($('#l_note')) $('#l_note').value = targetLog.note || '';
-    if($('#l_stir')) $('#l_stir').checked = !!targetLog.stir;
-
-    const inputCard = $('#log-input-card');
-    if(inputCard) inputCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  };
-
-  window.appDelLog = d => {
-    if(confirm(`${d} 기록을 삭제하시겠습니까?`)){
-      const b = cur();
-      b.logs = (b.logs || []).filter(l => l.d !== d);
-      save();
-      render();
-    }
-  };
-
-  window.appSetStatus = s => {
-    cur().status = s;
-    save();
-    render();
-  };
-
-  window.appDelBatch = () => {
-    if(confirm('이 배치와 관련된 모든 기록이 삭제됩니다. 계속하시겠습니까?')){
-      db = db.filter(b => b.id !== view.id);
-      save();
-      window.appGo('list');
-    }
-  };
-
-  /* ==========================================================================
-     🖼️ 화면 전체 고화질 이미지(PNG) 저장 엔진
-     ========================================================================== */
-  window.appExportImage = async () => {
-    const b = cur();
-    if(!b) return;
-
-    const loading = $('#capture-loading');
-    const area = $('#capture-area');
-    if(!area) return;
-
-    loading.style.display = 'flex';
-
-    // 캡처 전 불필요한 입력 요소 숨김 처리
-    const noExports = area.querySelectorAll('.no-export');
-    noExports.forEach(el => el.style.display = 'none');
-
-    try {
-      const canvas = await html2canvas(area, {
-        scale: 2, // 2배 고해상도 선명한 캡처
-        backgroundColor: getComputedStyle(document.body).backgroundColor || '#f6f1e7',
-        useCORS: true
-      });
-
-      const fileName = `${b.name}_일지_${today()}.png`;
-
-      // 모바일 공유 지원 시 파일 바로 저장창 띄우기
-      canvas.toBlob(async blob => {
-        const file = new File([blob], fileName, { type: 'image/png' });
-        if(navigator.canShare && navigator.canShare({ files: [file] })){
-          try {
-            await navigator.share({
-              title: `[미미록 일지] ${b.name}`,
-              files: [file]
-            });
-          } catch(e){}
-        } else {
-          // PC 다운로드
-          const link = document.createElement('a');
-          link.href = canvas.toDataURL('image/png');
-          link.download = fileName;
-          link.click();
-        }
-      });
-    } catch(err) {
-      alert('이미지 생성 중 오류가 발생했습니다: ' + err.message);
-    } finally {
-      noExports.forEach(el => el.style.display = '');
-      loading.style.display = 'none';
-    }
-  };
-
-  /* ==========================================================================
-     📄 실제 PDF 파일 생성 및 휴대폰/구글드라이브 직접 저장 엔진
-     ========================================================================== */
-  window.appExportPDF = async () => {
-    const b = cur();
-    if(!b) return;
-
-    const loading = $('#capture-loading');
-    const area = $('#capture-area');
-    if(!area) return;
-
-    loading.style.display = 'flex';
-
-    const noExports = area.querySelectorAll('.no-export');
-    noExports.forEach(el => el.style.display = 'none');
-
-    try {
-      const canvas = await html2canvas(area, {
-        scale: 2,
-        backgroundColor: '#ffffff',
-        useCORS: true
-      });
-
-      const imgData = canvas.toDataURL('image/jpeg', 0.95);
-      const { jsPDF } = window.jspdf;
-      const pdf = new jsPDF('p', 'mm', 'a4');
-
-      const imgWidth = 210; // A4 가로 (mm)
-      const pageHeight = 297; // A4 세로 (mm)
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      let heightLeft = imgHeight;
-      let position = 0;
-
-      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
-
-      // 내용이 길어 한 페이지가 넘어갈 경우 자동 페이지 분할
-      while (heightLeft > 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
+      }).join('') : '<div class="mute" style="margin-top:8px">기록된 일지가 없습니다.</div>'}
+    </div>
+  `;
+}
+
+function render(){
+  const a = $('#app');
+  if(!a) return;
+
+  if(view.page === 'list'){
+    const batchCards = db.slice().sort((x, y) => y.id - x.id).map(b => {
+      const last = (b.logs && b.logs.length) ? b.logs[b.logs.length - 1] : null;
+      let badgeType = b.type;
+      if(b.type !== '누룩'){
+        const sc = b.stages ? b.stages.length : 0;
+        badgeType = sc === 1 ? '단양주' : sc === 2 ? '이양주' : sc === 3 ? '삼양주' : `${sc}양주`;
       }
+      return `
+        <div class="card clickable" onclick="appGo('detail', ${b.id})">
+          <div>
+            <span class="tag" style="background:${b.type === '누룩' ? 'var(--c2)' : 'var(--acc)'}">${b.type}</span>
+            <span class="tag" style="background:var(--c1)">${badgeType}</span>
+            <span class="tag d">${esc(b.status)}</span>
+            <span class="mute">D+${dayN(b.start)}</span>
+          </div>
+          <h3 style="margin:6px 0 2px">${esc(b.name)}</h3>
+          <div class="mute">${brief(b)}</div>
+          <div class="mute" style="margin-top:4px">
+            ${last ? `최근: ${last.d} · 품온 ${last.temp}°C${last.hum ? `· 습도 ${last.hum}%` : (last.brix !== '' ? `· ${last.brix}°Bx` : '')}` : '측정 데이터 없음'}
+          </div>
+        </div>
+      `;
+    }).join('');
 
-      const fileName = `${b.name}_일지_${today()}.pdf`;
-      const pdfBlob = pdf.output('blob');
-      const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+    a.innerHTML = `
+      <h1>🍶 미미록 (味美錄)</h1>
+      <div class="sub">전통주 주방문 & 누룩 발효 기록장</div>
+      <button type="button" class="p" style="width:100%;margin:12px 0" onclick="appGo('new')">+ 새 배치 등록</button>
+      ${batchCards}
+    `;
+  } 
+  else if(view.page === 'new'){
+    a.innerHTML = `
+      <button type="button" class="g" onclick="appGo('list')">← 목록으로</button>
+      <h1>새 배치 만들기</h1>
+      <div class="card">
+        <label>종류 선택</label>
+        <select id="f_type">
+          <option value="막걸리">전통주 (막걸리/약주/탁주 덧술 배합비)</option>
+          <option value="누룩">전통 누룩 (반죽 목표량 역산 계산기 / 온·습도 일지)</option>
+        </select>
+        <label>배치명</label>
+        <input id="f_name" placeholder="예: 찰흑미 삼양주 또는 통밀 향온곡 3호">
+        <label>시작일자</label>
+        <input id="f_start" type="date" value="${today()}">
+        <button type="button" class="p" style="width:100%;margin-top:14px" onclick="appAddBatch()">생성 및 시작</button>
+      </div>
+    `;
+  } 
+  else {
+    const b = cur();
+    if(!b) return appGo('list');
+    const isNuruk = b.type === '누룩';
 
-      // 모바일: 시스템 저장창(내 파일/구글 드라이브 선택) 직접 호출
+    a.innerHTML = `
+      <div id="export-top-bar" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <button type="button" class="g" onclick="appGo('list')">← 목록</button>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
+          <button type="button" class="save-btn" onclick="appExportImage()">🖼️ 이미지로 저장</button>
+          <button type="button" class="save-btn" onclick="appExportPDF()">📄 PDF로 저장</button>
+        </div>
+      </div>
+
+      <div id="capture-area">
+        <div style="margin-top:4px">
+          <span class="tag" style="background:${isNuruk ? 'var(--c2)' : 'var(--acc)'}">${b.type}</span>
+          <span class="mute">시작일 ${b.start} (D+${dayN(b.start)})</span>
+        </div>
+        <h1 style="margin:4px 0">${esc(b.name)}</h1>
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+          <label style="margin:0;font-size:13px">진행 상태:</label>
+          <select class="no-export" onchange="appSetStatus(this.value)" style="width:auto;padding:4px 8px">
+            ${['발효중','숙성중','건조중','완료','실패'].map(s => `<option ${s === b.status ? 'selected' : ''}>${s}</option>`).join('')}
+          </select>
+        </div>
+
+        <div class="tabs no-export">
+          <button type="button" class="${view.tab === 'recipe' ? 'on' : ''}" onclick="appTab('recipe')">${isNuruk ? '🧮 누룩 역산 계산기' : '📖 배합비 & 덧술'}</button>
+          <button type="button" class="${view.tab === 'journal' ? 'on' : ''}" onclick="appTab('journal')">${isNuruk ? '🌡 온·습도·환기 일지' : '📝 발효 일지'}</button>
+        </div>
+
+        ${view.tab === 'recipe' 
+          ? (isNuruk ? nurukRecipeView(b) : wineRecipeView(b)) 
+          : (isNuruk ? nurukJournalView(b) : wineJournalView(b))}
+      </div>
+      
+      <div class="no-export" style="text-align:right;margin-top:10px">
+        <button type="button" class="g" style="color:#d9534f" onclick="appDelBatch()">이 배치 영구 삭제</button>
+      </div>
+    `;
+  }
+}
+
+/* ==========================================================================
+   전역 버튼 액션 핸들러 (window 객체에 직접 할당)
+   ========================================================================== */
+window.appGo = function(page, id){
+  view.page = page;
+  view.id = id || null;
+  view.tab = 'recipe';
+  view.chartFilter = 'all';
+  render();
+};
+
+window.appTab = function(t){
+  view.tab = t;
+  render();
+};
+
+window.appSetChartFilter = function(filterKey){
+  view.chartFilter = filterKey;
+  render();
+};
+
+window.appAddBatch = function(){
+  const name = v('f_name').trim();
+  if(!name) return alert('배치명을 입력해 주세요.');
+  const newId = Date.now();
+  const type = v('f_type');
+  const startDate = v('f_start') || today();
+
+  if(type === '누룩'){
+    db.push({
+      id: newId, type: '누룩', name: name, start: startDate, status: '발효중',
+      targetDough: 1000, lossRate: 10, moldingNote: '',
+      recipeItems: [{ cat: 'grain', name: '통밀가루', pct: 100 }, { cat: 'water', name: '반죽 생수', pct: 25 }],
+      logs: []
+    });
+  } else {
+    db.push({
+      id: newId, type: type, name: name, start: startDate, status: '발효중',
+      target: { nurukRatio: 10.0, waterRatio: 100.0 },
+      stages: [{ name: '밑술 (1단계)', date: startDate, items: [], note: '' }],
+      logs: []
+    });
+  }
+  saveDB();
+  window.appGo('detail', newId);
+};
+
+window.appUpdateNurukTarget = function(){
+  const b = cur();
+  b.targetDough = +v('nk_target_dough') || 1000;
+  b.lossRate = v('nk_loss_rate') !== '' ? +v('nk_loss_rate') : 10;
+  saveDB();
+  render();
+};
+
+window.appAddNurukRecipeItem = function(){
+  const cat = v('nk_cat');
+  const name = v('nk_name').trim();
+  const pct = +v('nk_pct');
+  if(!name || isNaN(pct) || pct <= 0) return alert('재료 이름과 투입 비율(%)을 올바르게 입력해 주세요.');
+
+  const b = cur();
+  if(!b.recipeItems) b.recipeItems = [];
+  b.recipeItems.push({ cat, name, pct });
+  saveDB();
+  render();
+};
+
+window.appDelNurukItem = function(idx){
+  cur().recipeItems.splice(idx, 1);
+  saveDB();
+  render();
+};
+
+window.appSaveMoldingNote = function(){
+  cur().moldingNote = v('nk_molding');
+  saveDB();
+  alert('성형 및 디딤 메모가 저장되었습니다.');
+};
+
+window.appHandleImgUpload = function(event){
+  const file = event.target.files[0];
+  if(!file) return;
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const maxW = 800;
+      const scale = img.width > maxW ? maxW / img.width : 1;
+      canvas.width = img.width * scale;
+      canvas.height = img.height * scale;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+      $('#l_img_data').value = dataUrl;
+      $('#img_preview_box').innerHTML = `<img src="${dataUrl}" class="log-img">`;
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+};
+
+window.appAddNurukLog = function(){
+  const b = cur();
+  const dVal = v('l_d');
+  if(!dVal) return alert('측정일을 입력해 주세요.');
+
+  b.logs = (b.logs || []).filter(l => l.d !== dVal);
+  b.logs.push({
+    d: dVal, temp: v('l_temp'), room: v('l_room'), hum: v('l_hum'),
+    vent: $('#l_vent') ? $('#l_vent').checked : false,
+    img: v('l_img_data') || '', note: v('l_note')
+  });
+  b.logs.sort((x, y) => x.d.localeCompare(y.d));
+  saveDB();
+  render();
+};
+
+window.appEditNurukLog = function(d){
+  const b = cur();
+  const targetLog = (b.logs || []).find(l => l.d === d);
+  if(!targetLog) return;
+
+  if($('#l_d')) $('#l_d').value = targetLog.d;
+  if($('#l_temp')) $('#l_temp').value = targetLog.temp;
+  if($('#l_room')) $('#l_room').value = targetLog.room;
+  if($('#l_hum')) $('#l_hum').value = targetLog.hum || '';
+  if($('#l_vent')) $('#l_vent').checked = !!targetLog.vent;
+  if($('#l_note')) $('#l_note').value = targetLog.note || '';
+  if($('#l_img_data')) $('#l_img_data').value = targetLog.img || '';
+  if($('#img_preview_box')){
+    $('#img_preview_box').innerHTML = targetLog.img ? `<img src="${targetLog.img}" class="log-img">` : '';
+  }
+
+  const inputCard = $('#log-input-card');
+  if(inputCard) inputCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+};
+
+window.appSaveTarget = function(){
+  const b = cur();
+  b.target = { nurukRatio: +v('t_nr') || 0, waterRatio: +v('t_wr') || 0 };
+  saveDB();
+  alert('목표 배합 비율이 저장되었습니다.');
+  render();
+};
+
+window.appAddStage = function(){
+  const b = cur();
+  if(!b.stages) b.stages = [];
+  const count = b.stages.length;
+  const stageTitle = count === 0 ? '밑술 (1단계)' : `${count}차 덧술 (${count + 1}단계)`;
+  b.stages.push({ name: stageTitle, date: today(), items: [], note: '' });
+  saveDB();
+  render();
+};
+
+window.appSetStageDate = function(sIdx, newDate){
+  const b = cur();
+  b.stages[sIdx].date = newDate;
+  if(sIdx === 0) b.start = newDate;
+  saveDB();
+  render();
+};
+
+window.appDelStage = function(sIdx){
+  if(confirm('단계를 삭제하시겠습니까?')){
+    cur().stages.splice(sIdx, 1);
+    saveDB();
+    render();
+  }
+};
+
+window.appAddStageItem = function(sIdx){
+  const cat = v('stg_cat_' + sIdx);
+  const name = v('stg_name_' + sIdx).trim();
+  const amt = +v('stg_amt_' + sIdx);
+  if(!name || !amt) return alert('원료 이름과 무게(g)를 입력해 주세요.');
+  cur().stages[sIdx].items.push(it(cat, name, amt));
+  saveDB();
+  render();
+};
+
+window.appDelStageItem = function(sIdx, iIdx){
+  cur().stages[sIdx].items.splice(iIdx, 1);
+  saveDB();
+  render();
+};
+
+window.appSaveStageNote = function(sIdx){
+  cur().stages[sIdx].note = v('stg_note_' + sIdx);
+  saveDB();
+  alert('해당 단계의 비고가 저장되었습니다.');
+};
+
+window.appAddWineLog = function(){
+  const b = cur();
+  const dVal = v('l_d');
+  if(!dVal) return alert('날짜를 입력해 주세요.');
+  
+  b.logs = (b.logs || []).filter(l => l.d !== dVal);
+  b.logs.push({
+    d: dVal, temp: v('l_temp'), room: v('l_room'), brix: v('l_brix'), ph: v('l_ph'),
+    stir: $('#l_stir') ? $('#l_stir').checked : false, note: v('l_note')
+  });
+  b.logs.sort((x, y) => x.d.localeCompare(y.d));
+  saveDB();
+  render();
+};
+
+window.appEditWineLog = function(d){
+  const b = cur();
+  const targetLog = (b.logs || []).find(l => l.d === d);
+  if(!targetLog) return;
+
+  if($('#l_d')) $('#l_d').value = targetLog.d;
+  if($('#l_temp')) $('#l_temp').value = targetLog.temp;
+  if($('#l_room')) $('#l_room').value = targetLog.room;
+  if($('#l_brix')) $('#l_brix').value = targetLog.brix;
+  if($('#l_ph')) $('#l_ph').value = targetLog.ph;
+  if($('#l_note')) $('#l_note').value = targetLog.note || '';
+  if($('#l_stir')) $('#l_stir').checked = !!targetLog.stir;
+
+  const inputCard = $('#log-input-card');
+  if(inputCard) inputCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+};
+
+window.appDelLog = function(d){
+  if(confirm(`${d} 기록을 삭제하시겠습니까?`)){
+    const b = cur();
+    b.logs = (b.logs || []).filter(l => l.d !== d);
+    saveDB();
+    render();
+  }
+};
+
+window.appSetStatus = function(s){
+  cur().status = s;
+  saveDB();
+  render();
+};
+
+window.appDelBatch = function(){
+  if(confirm('이 배치와 관련된 모든 기록이 삭제됩니다. 계속하시겠습니까?')){
+    db = db.filter(b => b.id !== view.id);
+    saveDB();
+    window.appGo('list');
+  }
+};
+
+/* ==========================================================================
+   액자형 이미지 저장 (PNG)
+   ========================================================================== */
+window.appExportImage = async function(){
+  const b = cur();
+  if(!b) return;
+
+  const loading = $('#capture-loading');
+  const area = $('#capture-area');
+  if(!area || typeof html2canvas === 'undefined') {
+    return alert('화면 캡처 모듈을 불러오는 중입니다. 잠시 후 다시 눌러주세요.');
+  }
+
+  loading.style.display = 'flex';
+  area.classList.add('export-mode');
+
+  const noExports = area.querySelectorAll('.no-export');
+  noExports.forEach(el => el.style.display = 'none');
+  const currentBg = getComputedStyle(document.body).backgroundColor || '#f6f1e7';
+
+  try {
+    await new Promise(r => setTimeout(r, 80));
+
+    const canvas = await html2canvas(area, {
+      scale: 2,
+      backgroundColor: currentBg,
+      useCORS: true,
+      logging: false
+    });
+
+    const fileName = `${b.name}_일지_${today()}.png`;
+
+    canvas.toBlob(async blob => {
+      const file = new File([blob], fileName, { type: 'image/png' });
       if(navigator.canShare && navigator.canShare({ files: [file] })){
         try {
-          await navigator.share({
-            title: `[미미록 PDF] ${b.name}`,
-            text: `${b.name} 양조 및 누룩 일지 PDF 문서입니다.`,
-            files: [file]
-          });
+          await navigator.share({ title: b.name, files: [file] });
         } catch(e){}
       } else {
-        // PC 브라우저 다운로드
-        pdf.save(fileName);
+        const link = document.createElement('a');
+        link.href = canvas.toDataURL('image/png');
+        link.download = fileName;
+        link.click();
       }
-    } catch(err) {
-      alert('PDF 생성 중 오류가 발생했습니다: ' + err.message);
-    } finally {
-      noExports.forEach(el => el.style.display = '');
-      loading.style.display = 'none';
-    }
-  };
+    });
+  } catch(err) {
+    alert('이미지 생성 오류: ' + err.message);
+  } finally {
+    area.classList.remove('export-mode');
+    noExports.forEach(el => el.style.display = '');
+    loading.style.display = 'none';
+  }
+};
 
-  render();
-})();
+/* ==========================================================================
+   A4 여백 균형 PDF 저장
+   ========================================================================== */
+window.appExportPDF = async function(){
+  const b = cur();
+  if(!b) return;
+
+  const loading = $('#capture-loading');
+  const area = $('#capture-area');
+  if(!area || typeof window.jspdf === 'undefined') {
+    return alert('PDF 생성 모듈을 불러오는 중입니다. 잠시 후 다시 눌러주세요.');
+  }
+
+  loading.style.display = 'flex';
+  area.classList.add('export-mode');
+
+  const noExports = area.querySelectorAll('.no-export');
+  noExports.forEach(el => el.style.display = 'none');
+
+  try {
+    await new Promise(r => setTimeout(r, 80));
+
+    const canvas = await html2canvas(area, {
+      scale: 2,
+      backgroundColor: '#ffffff',
+      useCORS: true,
+      logging: false
+    });
+
+    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF('p', 'mm', 'a4');
+
+    const margin = 10;
+    const pdfPageW = 210;
+    const pdfPageH = 297;
+    const printW = pdfPageW - (margin * 2);
+    const printH = (canvas.height * printW) / canvas.width;
+    
+    let heightLeft = printH;
+    let position = margin;
+
+    pdf.addImage(imgData, 'JPEG', margin, position, printW, printH);
+    heightLeft -= (pdfPageH - (margin * 2));
+
+    while (heightLeft > 0) {
+      pdf.addPage();
+      position = margin - (printH - heightLeft);
+      pdf.addImage(imgData, 'JPEG', margin, position, printW, printH);
+      heightLeft -= (pdfPageH - (margin * 2));
+    }
+
+    const fileName = `${b.name}_일지_${today()}.pdf`;
+    const pdfBlob = pdf.output('blob');
+    const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+
+    if(navigator.canShare && navigator.canShare({ files: [file] })){
+      try {
+        await navigator.share({
+          title: `[미미록 PDF] ${b.name}`,
+          files: [file]
+        });
+      } catch(e){}
+    } else {
+      pdf.save(fileName);
+    }
+  } catch(err) {
+    alert('PDF 생성 오류: ' + err.message);
+  } finally {
+    area.classList.remove('export-mode');
+    noExports.forEach(el => el.style.display = '');
+    loading.style.display = 'none';
+  }
+};
+
+// 최초 화면 렌더링
+render();
 </script>
 </body>
 </html>
